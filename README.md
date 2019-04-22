@@ -1,9 +1,10 @@
 # CMS ANALIZER  
 Espinosa Curiel Oscar  
 Manzano Cruz Isaias Abraham  
-
+## Dependencias  
+### Requiere BeautifulSoup: pip install BeautifulSoup  
 ## Como correrlo  
-### python cms_analizer -u http(s)://(ip|nombre_dominio):puerto(/directoruo)/ -c common.txt (-v)  
+### python cms_analizer.py -u http(s)://(ip|nombre_dominio):puerto(/directoruo)/ -c common.txt (-v)  
 -u especifica la url  
 -c el archivo con los nombres de los archivos a buscar  
 -v modo verboso  
