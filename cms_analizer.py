@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 #UNAM-CERT
 
-#Integrantes:
-#Manzano Cruz Isaias Abraham
-#Espinosa Curiel Oscar
-
-#Instalar BeautifulSoup
-#	pip install BeautifulSoup
+#-------------Integrantes---------------------
+#   Manzano Cruz Isaias Abraham
+#   Espinosa Curiel Oscar
+#---------------------------------------------
+#--------------IMPORTANTE---------------------
+#       Instalar BeautifulSoup
+#	    pip install BeautifulSoup
+#---------------------------------------------
 
 import sys
 import optparse
@@ -15,16 +17,10 @@ import ConfigParser
 import httplib
 import ssl
 import OpenSSL
+import json
 from BeautifulSoup import BeautifulSoup
 from time import sleep
-from requests import get
-from requests import put
-from requests import options
-from requests import post
-from requests import delete
-from requests import head
-from requests import patch
-from requests import session
+from requests import get, put, options, post, delete, head, patch, session
 from requests.exceptions import ConnectionError
 from re import search
 from datetime import datetime
@@ -40,7 +36,7 @@ def addOptions():
     parser.add_option('-v', '--verbose', action='store_true',dest='verbose', default=False, help='Si es activado el script mostrara informacion de las peticiones que se realizan')
     parser.add_option('-r', '--report', dest='report', default='reporte.txt', help='Indica el nombre del archivo de reporte')
     parser.add_option('-U', '--useragent', dest='useragent', default=None, help='Indica el User-Agent a usar, o un archivo con User-Agents')
-    parser.add_option('-c', '--config', dest='config', default=None, help='Indica el archivo de configuracion para ejecutar la herramienta')
+    parser.add_option('-c', '--config', dest='config', default=None, help='Indica el archivo JSON de configuracion para ejecutar la herramienta')
     opts,args = parser.parse_args()
     return opts
 
@@ -61,7 +57,7 @@ def checkOptions(options):
     '''
     if options.url is None:
         printError('Desbes especificar un server para atacar.', True)
-    elif options.config is None:
+    if options.config is None:
         printError('Desbes especificar un archivo de configuracion',True)
 
  
@@ -250,13 +246,73 @@ def make_requests(url, verbose, user_agent, protocol, report, files='common.txt'
     finally:
         print_report('\nSe encontraron: %d archivos en el servidor'%cont,report)
 
+def read_cmsJSON(opts):
+    """
+        Funcion que lee y parsea el archivo json con la configuracion del script
+        para la busqueda del CMS
 
-if __name__ == '__main__':
+        devuelve una instancia json
+    """
+    try:
+        print_verbose('Leyendo archivo ' + opts.config, opts.verbose)
+        return json.loads(open(opts.config).read())
+    
+    except IOError:
+        printError('El archivo ' + opts.config + ' no existe o no se tiene permisos de lectura',True)    
+    
+    except ValueError:
+        printError('El archivo ' + opts.config + ' no es formato JSON', True)
+
+def concat(cms_url, resource, is_subdir = False):
+    """
+        Funcion que concatena la URL del sitio con un recurso leido del json
+        retorna la url completa
+        Si se desea concatenar un subdirectorio se debe hacer True el parametro is_subdir
+    """
+    if is_subdir:
+        #si es subdirectorio, agregamos un / al final de la url
+        return cms_url + resource + '/' if cms_url[len(cms_url) - 1] == '/' else cms_url + '/' + resource + '/'
+    else:
+        return cms_url + resource if cms_url[len(cms_url) - 1] == '/' else cms_url + '/' + resource
+    
+
+def check_subdirs(opts, cms_json):
+    """
+        Funcion que hace una peticion HEAD al recurso dado para verificar que
+        existe, en orden de conocer el CMS objetivo
+    """
+    if 'check_subdirs' in cms_json.keys():
+        print_verbose('Buscando subdirectorios', opts.verbose)
+        
+        #iteramos sobre todos los subdirs dados
+        for s in cms_json['check_subdirs'].keys():
+            if head(concat(opts.url, cms_json['check_subdirs'][s], True)).status_code == 200:
+                #Existe al menos un subdirectorio dado, lo que nos dice que si es el
+                #CMS esperado
+                print_verbose('CMS ENCONTRADO!!!!', opts.verbose)
+                print_verbose('------> CMS: ' + cms_json['cms'] + '<--------', True)
+                
+                return True
+        
+        #Llegado a este punto, no hubo ninguna respuesta 200 a los recursos
+        print_verbose('No se encontro coincidencia con subdirectorios dados', opts.verbose)
+        return False
+    else:
+        print_verbose('No se dieron subdirectorios a buscar', opts.verbose)
+        return False
+        
+
+def main_cms_analizer():
+    """
+        Funcion principal del script
+    """
     #try:
     opts = addOptions()
-    #if opts.config != None:
-        #aqui configurar la herramienta para que se configure por medio del archivo
     checkOptions(opts)
+    #En este punto ya se reviso existencia de -u y -c
+    cms_json = read_cmsJSON(opts)
+    check_subdirs(opts, cms_json)
+    """
     protocol = verify_url(opts.url)
     create_report(opts.url, opts, opts.report)
     if opts.useragent == None or opts.useragent=='':
@@ -268,3 +324,9 @@ if __name__ == '__main__':
     #except Exception as e:
     printError('An unexpected error happend :(')
     printError(e, True)
+    """
+
+
+
+if __name__ == '__main__':
+    main_cms_analizer()

@@ -1,0 +1,19 @@
+{
+"cms": "Wordpress",
+"check_subdirs" : {
+	"1" : "wp-admin",
+	"2" : "wp-content",
+	"3" : "wp-includes"
+	},
+"check_files" : {
+	"1" : "wp-login.php",
+	"2" : "wp-cron.php",
+	"3" : "wp-config.php",
+	"4" : "wp-load.php"
+	},
+"check_version" : {
+	"1" : "/;generator",
+	"2" : "/wp-login.php;ver="
+	},
+"check_login" : "/wp-login.php"
+}
