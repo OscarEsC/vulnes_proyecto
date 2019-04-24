@@ -26,6 +26,10 @@ from re import search
 from datetime import datetime
 from random import choice
 
+#Usada para almacenar el cms detectado en la ejecucion
+#la usamos para definir el post en check_login
+cms_detected = None
+
 def addOptions():
     '''
     Funcion que parsea los datos que se tomen de linea de comandos como opciones para ejecutar el programa
@@ -37,6 +41,7 @@ def addOptions():
     parser.add_option('-r', '--report', dest='report', default='reporte.txt', help='Indica el nombre del archivo de reporte')
     parser.add_option('-U', '--useragent', dest='useragent', default=None, help='Indica el User-Agent a usar, o un archivo con User-Agents')
     parser.add_option('-c', '--config', dest='config', default=None, help='Indica el archivo JSON de configuracion para ejecutar la herramienta')
+    parser.add_option('-w', '--userlist', dest='userlist', default='http_default_users.txt', help='Lista de usuarios existentes a probar en el CMS')
     opts,args = parser.parse_args()
     return opts
 
@@ -311,18 +316,38 @@ def check_version(opts, cms_json):
         Devuelve True si encuentra la version, False en caso contrario
     
     """
-
+    #Revisamos que exista la llave 'check_version' en el json
     if 'check_version' in cms_json.keys():
+        #Iteramos si se dan varias tuplas de busqueda
         for  gv in cms_json['check_version'].keys():
+            #El formato en el json es recurso;patron_de_busqueda
             resource, patron = cms_json['check_version'][gv].split(';')
-            print (resource, patron)
+            #buscamos el patron en el codigo fuente del recurso, obteniendo 20 caracteres inmediatos
+            #anteriores y 30 inmediatos posteriores
             patron_founded = search('(.{1,20}' + patron + '.{1,30})', get(concat(opts.url, resource)).text)
             if patron_founded:
-                version = search(patron + '.*([1-9]\.[0-9]{1,2}\.[0-9]{1,2})', patron_founded.group(1))
+                #Dentro de este string buscamos el numero de version nn.nn.nn
+                version = search(patron + '.*([1-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2})', patron_founded.group(1))
                 if version:
-                    print " version"
-                    print version.group(1)
+                    print_verbose('Version encontrada!!!!', opts.verbose)
+                    print "----------> Version: " + version.group(1)  + " <----------"
+                    return True
+    
+    return False
 
+def check_login(opts, cms_json):
+    #establecemos que nos referimos a una variable global, no local
+    global cms_detected
+    try:
+        with open(opts.userlist) as userlist:
+            if 'check_login' in cms_json.keys():
+                login_page = concat(opts.url, cms_json['check_login'])
+                if cms_detected == 'Wordpress':
+                    print get(login_page).headers
+                    #copiar los headers para hacer el ataque FB al login probando solo usuarios
+
+    except IOError:
+        printError('El archivo ' + opts.config + ' no existe o no se tiene permisos de lectura',True)         
 
 
 def main_cms_analizer():
@@ -330,12 +355,17 @@ def main_cms_analizer():
         Funcion principal del script
     """
     #try:
+    global cms_detected
     opts = addOptions()
     checkOptions(opts)
     #En este punto ya se reviso existencia de -u y -c
     cms_json = read_cmsJSON(opts)
-    check_subdirs(opts, cms_json)
+    if check_subdirs(opts, cms_json):
+        cms_detected = cms_json['cms']
+
     check_version(opts, cms_json)
+
+    check_login(opts, cms_json)
     """
     protocol = verify_url(opts.url)
     create_report(opts.url, opts, opts.report)
