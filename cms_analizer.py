@@ -279,8 +279,11 @@ def concat(cms_url, resource, is_subdir = False):
 def check_subdirs(opts, cms_json):
     """
         Funcion que hace una peticion HEAD al recurso dado para verificar que
-        existe, en orden de conocer el CMS objetivo
+        existe, en orden de conocer el CMS objetivo.
+        Retorna True si hay coincidencia, False en caso contrario
     """
+
+    #Validamos que se tenga 'check_subdirs' en el json
     if 'check_subdirs' in cms_json.keys():
         print_verbose('Buscando subdirectorios', opts.verbose)
         
@@ -300,7 +303,27 @@ def check_subdirs(opts, cms_json):
     else:
         print_verbose('No se dieron subdirectorios a buscar', opts.verbose)
         return False
-        
+
+def check_version(opts, cms_json):
+    """
+        Funcion que busca la version del cms a partir de los recursos
+        y los patrones de busqueda dados en el json.
+        Devuelve True si encuentra la version, False en caso contrario
+    
+    """
+
+    if 'check_version' in cms_json.keys():
+        for  gv in cms_json['check_version'].keys():
+            resource, patron = cms_json['check_version'][gv].split(';')
+            print (resource, patron)
+            patron_founded = search('(.{1,20}' + patron + '.{1,30})', get(concat(opts.url, resource)).text)
+            if patron_founded:
+                version = search(patron + '.*([1-9]\.[0-9]{1,2}\.[0-9]{1,2})', patron_founded.group(1))
+                if version:
+                    print " version"
+                    print version.group(1)
+
+
 
 def main_cms_analizer():
     """
@@ -312,6 +335,7 @@ def main_cms_analizer():
     #En este punto ya se reviso existencia de -u y -c
     cms_json = read_cmsJSON(opts)
     check_subdirs(opts, cms_json)
+    check_version(opts, cms_json)
     """
     protocol = verify_url(opts.url)
     create_report(opts.url, opts, opts.report)
