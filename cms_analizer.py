@@ -30,6 +30,12 @@ from random import choice
 #la usamos para definir el post en check_login
 cms_detected = None
 
+#Diccionario usado para almacenar nombre de input de formulario para POST de login
+#y el error que se debe buscar
+commons_cms = {
+    'Wordpress': ['log', 'pwd', '<div id="login_error">.*The password you entered for the username <strong>.*</strong> is incorrect.']
+}
+
 def addOptions():
     '''
     Funcion que parsea los datos que se tomen de linea de comandos como opciones para ejecutar el programa
@@ -101,7 +107,8 @@ def create_report(webpage, options, report_file):
         print 'El archivo: "' + report_file + '", sera creado con la informacion del reporte'
         f_report.write(' Archivo reporte '.center(70,'=')+'\n\n')
         f_report.write('Hora de ejecucion: ' + str(datetime.now()) + '\n' + 'Server analizado: ' + webpage + '\n' + 'Opciones de ejecucion: ' + str(options)[1:-1].replace("'",'') + '\n')
-   
+
+
 def print_report(message, report_file):
     '''
     Esta funcion escribe un mensaje en el archivo de reporte"
@@ -198,6 +205,7 @@ def make_agent(agent):
     except:
         return [agent]
 
+
 def make_requests(url, verbose, user_agent, protocol, report, files='common.txt', extractv=True, methods=True, ssl_tls=True, time=0.05):
     '''
 	Funcion que hace las peticiones al sitio web que se quiere atacar
@@ -251,6 +259,7 @@ def make_requests(url, verbose, user_agent, protocol, report, files='common.txt'
     finally:
         print_report('\nSe encontraron: %d archivos en el servidor'%cont,report)
 
+
 def read_cmsJSON(opts):
     """
         Funcion que lee y parsea el archivo json con la configuracion del script
@@ -267,6 +276,7 @@ def read_cmsJSON(opts):
     
     except ValueError:
         printError('El archivo ' + opts.config + ' no es formato JSON', True)
+
 
 def concat(cms_url, resource, is_subdir = False):
     """
@@ -290,7 +300,7 @@ def check_subdirs(opts, cms_json):
 
     #Validamos que se tenga 'check_subdirs' en el json
     if 'check_subdirs' in cms_json.keys():
-        print_verbose('Buscando subdirectorios', opts.verbose)
+        print_verbose('\nBuscando subdirectorios', opts.verbose)
         
         #iteramos sobre todos los subdirs dados
         for s in cms_json['check_subdirs'].keys():
@@ -309,6 +319,7 @@ def check_subdirs(opts, cms_json):
         print_verbose('No se dieron subdirectorios a buscar', opts.verbose)
         return False
 
+
 def check_version(opts, cms_json):
     """
         Funcion que busca la version del cms a partir de los recursos
@@ -318,6 +329,8 @@ def check_version(opts, cms_json):
     """
     #Revisamos que exista la llave 'check_version' en el json
     if 'check_version' in cms_json.keys():
+        print_verbose("\nBuscando version del CMS", opts.verbose)
+
         #Iteramos si se dan varias tuplas de busqueda
         for  gv in cms_json['check_version'].keys():
             #El formato en el json es recurso;patron_de_busqueda
@@ -333,22 +346,82 @@ def check_version(opts, cms_json):
                     print "----------> Version: " + version.group(1)  + " <----------"
                     return True
     
+    else:
+        printError('No se encontro la llave check_version en el json dado')
+
     return False
 
-def check_login(opts, cms_json):
-    #establecemos que nos referimos a una variable global, no local
-    global cms_detected
+def list_user(opts, login_page, user_log, password_log, error_regex):
+    """
+        Funcion que hace un ataque de fuerza bruta para listar usuarios comunes
+        en el login del CMS. El ataque se hace con una contrasena cualquiera, pues
+        el punto no es encontrar credenciales, solo existencia de usuarios comunes.
+
+        Retorna una lista con todos los usuarios validos encontrados se
+        almacenan en una lista.
+        
+        user_log es el nombre del input para la cuenta de usuario dentro del
+        formulario. password_log es el nombre del input de la contrasena dentro
+        del mismo
+    """
+    #Lista para almacenar los usuarios validos
+    valid_users = []
     try:
         with open(opts.userlist) as userlist:
-            if 'check_login' in cms_json.keys():
-                login_page = concat(opts.url, cms_json['check_login'])
-                if cms_detected == 'Wordpress':
-                    print get(login_page).headers
-                    #copiar los headers para hacer el ataque FB al login probando solo usuarios
+            for user in userlist:
+                #Quitamos el \n del final de la linea leida
+                user = user[:len(user) - 1]
+                #En el body ponemos los datos del formulario
+                #La contrasena es indiferente
+                payload = {user_log: user, password_log: 'password'}
+                print_verbose('Peticion con el usuario ' + user, opts.verbose)
+
+                r = post(login_page, data=payload)
+                #Buscamos el error dado, que depende del cms encontrado
+                err = search(error_regex, str(r.text))
+
+                if err:
+                    print_verbose('El usuario ' + user + ' Es un usuario valido!', opts.verbose)
+                    valid_users.append(user)
+                
+            if len(valid_users) > 0:
+                print "Usuarios validos encontrados: "
+                for usr in valid_users:
+                    print "\t" + usr
+            else:
+                print "No se encontraron usuarios validos"
+            return valid_users
+
 
     except IOError:
-        printError('El archivo ' + opts.config + ' no existe o no se tiene permisos de lectura',True)         
+        printError('El archivo ' + opts.userlist + ' no existe o no se tiene permisos de lectura')
 
+
+def check_login(opts, cms_json):
+    """
+        Funcion que analiza existencia de usuarios validos en el login del cms
+        
+        Es necesario haber detectado antes el CMS
+
+        Dependiendo del CMS detectado anteriormente, es que se analiza el
+        response de la pagina ante cada intento de inicio de sesion
+    """
+    #establecemos que nos referimos a una variable global, no local
+    global cms_detected
+    global commons_cms
+
+    if 'check_login' in cms_json.keys():
+        #obtenemos la url del recurso de login
+        login_page = concat(opts.url, cms_json['check_login'])
+        
+        print_verbose('\nBuscando usuarios comunes en: ' + login_page +"\n", opts.verbose)
+        
+        if cms_detected == 'Wordpress':
+            #obtenemos los valores respectivos necesarios de commmons_cms
+            list_user(opts, login_page, commons_cms['Wordpress'][0], commons_cms['Wordpress'][1], commons_cms['Wordpress'][2])        
+
+    else:
+        printError('No existe campo check_list en el json dado')
 
 def main_cms_analizer():
     """
@@ -379,7 +452,6 @@ def main_cms_analizer():
     printError('An unexpected error happend :(')
     printError(e, True)
     """
-
 
 
 if __name__ == '__main__':
