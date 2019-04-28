@@ -30,6 +30,9 @@ from random import choice
 #la usamos para definir el post en check_login
 cms_detected = None
 
+#Usada para almacenar la raiz del sitio dado como argumento al script
+cms_root = None
+
 #Diccionario usado para almacenar nombre de input de formulario para POST de login
 #y el error que se debe buscar
 commons_cms = {
@@ -76,8 +79,8 @@ def verify_url(url):
     '''
     Funcion que verifica los argumentos minimos para poder ejecutar el programa
     '''
-    http_re=r"(http://.*:[0-9]{2}(/.*)?/$)"
-    https_re=r"(https://.*:[0-9]{3}(/.*)?/$)"
+    http_re=r"(http://.*[:][0-9]{2}(/.*)?/$)"
+    https_re=r"(https://.*[:][0-9]{3}(/.*)?/$)"
     if search(http_re,url):
         return 'http'
     elif search(https_re,url):
@@ -291,7 +294,17 @@ def concat(cms_url, resource, is_subdir = False):
         return cms_url + resource if cms_url[len(cms_url) - 1] == '/' else cms_url + '/' + resource
     
 
-def check_subdirs(opts, cms_json):
+def get_root(opts):
+    """
+        Funcion que nos devuelve la raiz del sitio dado
+        a partir de aqui se buscan todos los recursos
+    """
+    root = search('(https?://.*:?[0-9]{0,3})(/.*)', opts.url)
+    if root:
+        return root.group(1)
+
+
+def check_subdirs(opts, cms_json, cms_root):
     """
         Funcion que hace una peticion HEAD al recurso dado para verificar que
         existe, en orden de conocer el CMS objetivo.
@@ -304,6 +317,7 @@ def check_subdirs(opts, cms_json):
         
         #iteramos sobre todos los subdirs dados
         for s in cms_json['check_subdirs'].keys():
+            #if head(concat(cms_root, cms_json['check_subdirs'][s], True)).status_code == 200:
             if head(concat(opts.url, cms_json['check_subdirs'][s], True)).status_code == 200:
                 #Existe al menos un subdirectorio dado, lo que nos dice que si es el
                 #CMS esperado
@@ -320,7 +334,12 @@ def check_subdirs(opts, cms_json):
         return False
 
 
-def check_version(opts, cms_json):
+def check_backups(cms_root, opts):
+    print "si"
+    #falta
+
+
+def check_version(cms_root, opts, cms_json):
     """
         Funcion que busca la version del cms a partir de los recursos
         y los patrones de busqueda dados en el json.
@@ -337,6 +356,7 @@ def check_version(opts, cms_json):
             resource, patron = cms_json['check_version'][gv].split(';')
             #buscamos el patron en el codigo fuente del recurso, obteniendo 20 caracteres inmediatos
             #anteriores y 30 inmediatos posteriores
+            #patron_founded = search('(.{1,20}' + patron + '.{1,30})', get(concat(cms_root, resource)).text)
             patron_founded = search('(.{1,20}' + patron + '.{1,30})', get(concat(opts.url, resource)).text)
             if patron_founded:
                 #Dentro de este string buscamos el numero de version nn.nn.nn
@@ -350,6 +370,7 @@ def check_version(opts, cms_json):
         printError('No se encontro la llave check_version en el json dado')
 
     return False
+
 
 def list_user(opts, login_page, user_log, password_log, error_regex):
     """
@@ -397,7 +418,7 @@ def list_user(opts, login_page, user_log, password_log, error_regex):
         printError('El archivo ' + opts.userlist + ' no existe o no se tiene permisos de lectura')
 
 
-def check_login(opts, cms_json):
+def check_login(cms_root, opts, cms_json):
     """
         Funcion que analiza existencia de usuarios validos en el login del cms
         
@@ -412,6 +433,7 @@ def check_login(opts, cms_json):
 
     if 'check_login' in cms_json.keys():
         #obtenemos la url del recurso de login
+        #login_page = concat(cms_root, cms_json['check_login'])
         login_page = concat(opts.url, cms_json['check_login'])
         
         print_verbose('\nBuscando usuarios comunes en: ' + login_page +"\n", opts.verbose)
@@ -429,16 +451,21 @@ def main_cms_analizer():
     """
     #try:
     global cms_detected
+
     opts = addOptions()
     checkOptions(opts)
     #En este punto ya se reviso existencia de -u y -c
     cms_json = read_cmsJSON(opts)
-    if check_subdirs(opts, cms_json):
+    cms_root = get_root(opts)
+
+    if check_subdirs(opts, cms_json, cms_root):
+        #Se prosigue con la ejecucion si se reconocio el CMS
         cms_detected = cms_json['cms']
+        
+        check_version(cms_root, opts, cms_json)
+        check_backups(cms_root, opts)
+        check_login(cms_root, opts, cms_json)
 
-    check_version(opts, cms_json)
-
-    check_login(opts, cms_json)
     """
     protocol = verify_url(opts.url)
     create_report(opts.url, opts, opts.report)
