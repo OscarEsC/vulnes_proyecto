@@ -51,7 +51,8 @@ def addOptions():
     parser.add_option('-U', '--useragent', dest='useragent', default=None, help='Indica el User-Agent a usar, o un archivo con User-Agents')
     parser.add_option('-c', '--config', dest='config', default=None, help='Indica el archivo JSON de configuracion para ejecutar la herramienta')
     parser.add_option('-w', '--userlist', dest='userlist', default='http_default_users.txt', help='Lista de usuarios existentes a probar en el CMS')
-    parser.add_option('-C', '--Common', dest='common', default='common.txt', help='Lista de archivos a probar en el cms')
+    parser.add_option('-C', '--Common', dest='common', default='common.txt', help='Lista de archivos existentes a probar en el CMS')
+    parser.add_option('-n', '--num_plugins', type=int, dest='num_plugins', default=15, help='Numero de plugins instalados a buscar dentro del CMS')
     opts,args = parser.parse_args()
     return opts
 
@@ -238,7 +239,6 @@ def make_requests(url, verbose, user_agent, report, files, extractv=True, method
         return cont
 
 
-
 def read_cmsJSON(opts):
     """
         Funcion que lee y parsea el archivo json con la configuracion del script
@@ -248,6 +248,7 @@ def read_cmsJSON(opts):
     """
     try:
         print_verbose('Leyendo archivo ' + opts.config, opts.verbose)
+        print_report('Se intenta leer el archivo ' + opts.config, opts.report)
         return json.loads(open(opts.config).read())
     
     except IOError:
@@ -312,12 +313,17 @@ def check_subdirs(opts, cms_json, cms_root):
                 #CMS esperado
                 print_verbose('CMS ENCONTRADO!!!!', opts.verbose)
                 print_verbose('------> CMS: ' + cms_json['cms'] + '<--------', True)
+                print_report('Se encontro el CMS!!    ' + cms_json['cms'], opts.report)
+
                 return True
-        #Llegado a este punto, no hubo ninguna respuesta 200 a los recursos
+        #Llegado a este punto, no hubo ninguna respuesta 200 o 403 a los recursos
         print_verbose('No se encontro coincidencia con subdirectorios dados', opts.verbose)
+        print_report('No se pudo diferenciar el CMS', opts.report)
+
         return False
     else:
         print_verbose('No se dieron subdirectorios a buscar', opts.verbose)
+        print_report('No se dieron subdirectorios a buscar', opts.report)
         return False
 
 
@@ -351,11 +357,14 @@ def check_version(cms_root, opts, cms_json):
                 version = search(patron + '.*([1-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2})', patron_founded.group(1))
                 if version:
                     print_verbose('Version encontrada!!!!', opts.verbose)
-                    print "----------> Version: " + version.group(1)  + " <----------"
+                    print_verbose("----------> Version: " + version.group(1)  + " <----------", opt.verbose)
+                    print_report('Version del CMS encontrada:    ' + version.group(1), opts.report)
+
                     return True
     
     else:
         printError('No se encontro la llave check_version en el json dado')
+        print_report('No se asigno valor a check_version en el json dado', opts.report)
 
     return False
 
@@ -394,15 +403,20 @@ def list_user(opts, login_page, user_log, password_log, error_regex):
                     valid_users.append(user)
                 
             if len(valid_users) > 0:
-                print "Usuarios validos encontrados: "
+                print_verbose("Usuarios validos encontrados: ", opts.verbose)
+                print_report("Usuarios validos encontrados: ", opts.report)
                 for usr in valid_users:
-                    print "\t" + usr
+                    print_verbose("\t" + usr, opts.verbose)
+                    print_report( "\t" + user, opts.report)
             else:
-                print "No se encontraron usuarios validos"
+                print_verbose("No se encontraron usuarios validos", opts.verbose)
+                print_report("No se encontraron usuarios validos", opts.report)
+
             return valid_users
 
 
     except IOError:
+        print_report('Error al leer el archivo ' + opts.userlist, opts.report)
         printError('El archivo ' + opts.userlist + ' no existe o no se tiene permisos de lectura')
 
 
@@ -430,7 +444,14 @@ def check_login(cms_root, opts, cms_json):
             #obtenemos los valores respectivos necesarios de commmons_cms
             list_user(opts, login_page, commons_cms['Wordpress'][0], commons_cms['Wordpress'][1], commons_cms['Wordpress'][2])        
 
+        if cms_detected == 'Joomla':
+            #No hay forma de listar usuarios en Joomla sin ataque de fuerza bruta de
+            #usuario-contrasena
+            print_verbose("Joomla no expone informacion de las cuentas registradas", opts.verbose)
+            print_report("Joomla no expone informacion de las cuentas registradas", opts.report)
+    
     else:
+        print_report('No existe campo check_list en el json dado', opts.report)
         printError('No existe campo check_list en el json dado')
 
 def main_cms_analizer():
