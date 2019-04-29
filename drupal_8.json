@@ -9,9 +9,10 @@
 	"1" : "user/login"
 	},
 "check_version" : {
-	"1" : "core/CHANGELOG.txt;Drupal ",
-	"2" : ";content=",
-    "3" : "core/lib/Drupal.php;VERSION"
+	"1" : ";content=",
+	"2" : "core/CHANGELOG.txt;Drupal ",
+	"3" : ";content=",
+    "4" : "core/lib/Drupal.php;VERSION"
 	},
 "check_login" : "user/login",
 "check_root" : {
