@@ -51,6 +51,7 @@ def addOptions():
     parser.add_option('-U', '--useragent', dest='useragent', default=None, help='Indica el User-Agent a usar, o un archivo con User-Agents')
     parser.add_option('-c', '--config', dest='config', default=None, help='Indica el archivo JSON de configuracion para ejecutar la herramienta')
     parser.add_option('-w', '--userlist', dest='userlist', default='http_default_users.txt', help='Lista de usuarios existentes a probar en el CMS')
+    parser.add_option('-C', '--Common', dest='common', default='common.txt', help='Lista de archivos a probar en el cms')
     opts,args = parser.parse_args()
     return opts
 
@@ -81,11 +82,7 @@ def verify_url(url):
     '''
     http_re=r"(http://.*[:][0-9]{2}(/.*)?/$)"
     https_re=r"(https://.*[:][0-9]{3}(/.*)?/$)"
-    if search(http_re,url):
-        return 'http'
-    elif search(https_re,url):
-        return 'https'
-    else:
+    if not search(http_re,url):
         printError('URL no valida:%s'%url,True)
       
 
@@ -179,24 +176,6 @@ def informacion(url):
     return server, powered, cms
 
 
-def certificados(url):
-    '''
-    Funcion que recibe como parametro la url y obtiene informacion del certificado, si es que utiliza https, regresando la informacion del certificado la cual se escribira en el archivo.
-    '''
-    texto = "Informacion del certificado: "
-    url2=url.split(':')[1][2:]
-    cert = ssl.get_server_certificate((url2, 443))
-    x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
-    informacion = str(x509.get_subject().get_components())
-    informacion = texto + informacion
-    try:
-        req=get(url,verify=True)
-        message = 'El servidor tiene un certificado valido'
-    except:
-        message = 'El servdor tiene un certificado no valido'
-    return informacion,message
-
-
 def make_agent(agent):
     '''
     Funcion que devuelve una lista, con los agentes a utiliar en cada peticion
@@ -209,7 +188,7 @@ def make_agent(agent):
         return [agent]
 
 
-def make_requests(url, verbose, user_agent, protocol, report, files='common.txt', extractv=True, methods=True, ssl_tls=True, time=0.05):
+def make_requests(url, verbose, user_agent, report, files, extractv=True, methods=True, ssl_tls=True, time=0):
     '''
 	Funcion que hace las peticiones al sitio web que se quiere atacar
 	Recibe la url, si se desea imprimir mensajes con verbose, el archivo de de donde va a sacar los archivos a buscar
@@ -224,12 +203,6 @@ def make_requests(url, verbose, user_agent, protocol, report, files='common.txt'
             message1 = metodos_http(url)
             print_verbose(message1,verbose)
             print_report(message1,report)
-        if ssl_tls and protocol == 'https':
-            info,certs = certificados(url)
-            print_verbose(info,verbose)
-            print_verbose(certs,verbose)
-            print_report(info,report)
-            print_report(certs,report)
         if extractv:
             server,powered,cms=informacion(url)
             print_verbose(server,verbose)
@@ -238,29 +211,30 @@ def make_requests(url, verbose, user_agent, protocol, report, files='common.txt'
             print_report(server,report)
             print_report(powered,report)
             print_report(cms,report)
-    	with open(files, 'r') as f_files:
-            for fl in f_files:
-                fl = fl.strip('\n')
-                url_file=url+fl
-                s=session()
-                headers={}
-                headers['User-agent']=choice(user_agent)
-                response=s.get(url_file,headers=headers)
-                if (response.status_code == 200 or response.status_code > 300) and (response.status_code < 400):
-                    leng = len(response.content)
-                    message='\t%s : File found    |    lenght:%d    |    (CODE:%d)' %(fl,leng,response.status_code)
-                    print_verbose(message, verbose)
-                    print_report(message, report)
-                    cont+=1
-        	else:
-                    message='\t%s : File not found    |    (CODE:%s)' %(fl,str(response.status_code))
-                    print_verbose(message, verbose)
-                    print_report(message, 'Errores_4XX.txt')
-            	sleep(time)
+        for fl in files:
+            fl = fl.strip('\n')
+            url_file=url+fl
+            s=session()
+            headers={}
+            headers['User-agent']=choice(user_agent)
+            response=s.get(url_file,headers=headers)
+            if (response.status_code == 200 or response.status_code > 300) and (response.status_code < 404):
+                leng = len(response.content)
+                message='\t%s : File found    |    lenght:%d    |    (CODE:%d)' %(fl,leng,response.status_code)
+                print_verbose(message, verbose)
+                print_report(message, report)
+                cont+=1
+            else:
+                message='\t%s : File not found    |    (CODE:%s)' %(fl,str(response.status_code))
+                print_verbose(message, verbose)
+                print_report(message, 'Errores_4XX.txt')
+                sleep(time)
     except ConnectionError:
         printError('Error en la conexion, tal vez el servidor no esta arriba.',True)
     finally:
         print_report('\nSe encontraron: %d archivos en el servidor'%cont,report)
+        return cont
+
 
 
 def read_cmsJSON(opts):
@@ -276,7 +250,6 @@ def read_cmsJSON(opts):
     
     except IOError:
         printError('El archivo ' + opts.config + ' no existe o no se tiene permisos de lectura',True)    
-    
     except ValueError:
         printError('El archivo ' + opts.config + ' no es formato JSON', True)
 
@@ -292,17 +265,29 @@ def concat(cms_url, resource, is_subdir = False):
         return cms_url + resource + '/' if cms_url[len(cms_url) - 1] == '/' else cms_url + '/' + resource + '/'
     else:
         return cms_url + resource if cms_url[len(cms_url) - 1] == '/' else cms_url + '/' + resource
-    
 
-def get_root(opts):
+
+def get_root(opts,files):
     """
         Funcion que nos devuelve la raiz del sitio dado
         a partir de aqui se buscan todos los recursos
     """
-    root = search('(https?://.*:?[0-9]{0,3})(/.*)', opts.url)
-    if root:
-        return root.group(1)
-
+    pos=[]
+    found = []
+    print files.values()
+    user_agent=make_agent('user_agents.txt')
+    recursos = opts.url.split('/')[3:]
+    urls = ['/'+'/'.join(recursos[:x+1]) for x in range(len(recursos))]
+    urls.insert(0,'/')
+    url= opts.url.replace(urls[-1],'')
+    for u in urls:
+        full_url = url+u
+        print full_url
+        n = make_requests(full_url, opts.verbose, user_agent, opts.report,files.values())
+        pos.append(full_url)
+        found.append(n)
+    root = pos[found.index(max(found))]
+    return root
 
 def check_subdirs(opts, cms_json, cms_root):
     """
@@ -314,18 +299,16 @@ def check_subdirs(opts, cms_json, cms_root):
     #Validamos que se tenga 'check_subdirs' en el json
     if 'check_subdirs' in cms_json.keys():
         print_verbose('\nBuscando subdirectorios', opts.verbose)
-        
         #iteramos sobre todos los subdirs dados
         for s in cms_json['check_subdirs'].keys():
             #if head(concat(cms_root, cms_json['check_subdirs'][s], True)).status_code == 200:
-            if head(concat(opts.url, cms_json['check_subdirs'][s], True)).status_code == 200:
+            code = head(concat(opts.url, cms_json['check_subdirs'][s], True)).status_code
+            if code == 200 or code == 403:
                 #Existe al menos un subdirectorio dado, lo que nos dice que si es el
                 #CMS esperado
                 print_verbose('CMS ENCONTRADO!!!!', opts.verbose)
                 print_verbose('------> CMS: ' + cms_json['cms'] + '<--------', True)
-                
                 return True
-        
         #Llegado a este punto, no hubo ninguna respuesta 200 a los recursos
         print_verbose('No se encontro coincidencia con subdirectorios dados', opts.verbose)
         return False
@@ -451,12 +434,13 @@ def main_cms_analizer():
     """
     #try:
     global cms_detected
-
     opts = addOptions()
+    create_report(opts.url, opts, opts.report)
     checkOptions(opts)
     #En este punto ya se reviso existencia de -u y -c
     cms_json = read_cmsJSON(opts)
-    cms_root = get_root(opts)
+    cms_root = get_root(opts,cms_json["check_root"])
+    print 'Raiz del CMS: '+cms_root
 
     if check_subdirs(opts, cms_json, cms_root):
         #Se prosigue con la ejecucion si se reconocio el CMS
