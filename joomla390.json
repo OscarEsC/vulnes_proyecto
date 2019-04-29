@@ -1,0 +1,18 @@
+{
+"cms": "Joomla",
+"check_subdirs" : {
+	"1" : "administrator",
+	"2" : "bin",
+	"3" : "media"
+	},
+"check_files" : {
+	"1" : "htaccess.txt",
+	"2" : "README.txt",
+	"3" : "configuration.php",
+	"4" : "web.config.txt"
+	},
+"check_version" : {
+	"1" : "/language/en-GB/en-GB.xml;<version>"
+	},
+"check_login" : "/administrator/index.php"
+}
