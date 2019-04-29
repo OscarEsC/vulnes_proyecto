@@ -14,5 +14,17 @@
 "check_version" : {
 	"1" : "/language/en-GB/en-GB.xml;<version>"
 	},
-"check_login" : "/administrator/index.php"
+"check_login" : "/administrator/index.php",
+"check_root" : {
+    "1" : "administrator",
+	"2" : "bin",
+    "3" : "cache",
+    "4" : "cli",
+    "5" : "components",
+    "6" : "images",
+    "7" : "includes",
+    "8" : "language",
+    "9" : "libraries",
+    "10" : "modules"
+    }
 }
