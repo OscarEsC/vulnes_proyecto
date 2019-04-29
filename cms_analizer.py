@@ -355,7 +355,6 @@ def check_version(cms_root, opts, cms_json):
             if patron_founded:
                 #Dentro de este string buscamos el numero de version nn.nn.nn
                 version = search(patron + '.*([1-9]{1,2}\.?[0-9]{0,2}\.?[0-9]{0,2})', patron_founded.group(1))
-                print "patron:"+patron_founded.group(1)
                 if version:
                     print_verbose('Version encontrada!!!!', opts.verbose)
                     print_verbose("----------> Version: " + version.group(1)  + " <----------", opts.verbose)
