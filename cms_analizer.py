@@ -218,21 +218,23 @@ def make_requests(url, verbose, user_agent, report, files, extractv=True, method
             headers={}
             headers['User-agent']=choice(user_agent)
             response=s.get(url_file,headers=headers)
-            if (response.status_code == 200 or response.status_code > 300) and (response.status_code < 404):
+            if (response.status_code == 200 or response.status_code > 300 or response.status_code > 403) and (response.status_code < 400):
                 leng = len(response.content)
-                message='\t%s : File found    |    lenght:%d    |    (CODE:%d)' %(fl,leng,response.status_code)
-                print_verbose(message, verbose)
+                message='\t%s : File found    (CODE:%d   |   lenght:%d)' %(fl,leng,response.status_code)
+                #print_verbose(message, verbose)
+                print(message)
                 print_report(message, report)
                 cont+=1
             else:
-                message='\t%s : File not found    |    (CODE:%s)' %(fl,str(response.status_code))
+                message='\t%s : File not found    (CODE:%s)' %(fl,str(response.status_code))
                 print_verbose(message, verbose)
-                print_report(message, 'Errores_4XX.txt')
+                #print_report(message, 'Errores_4XX.txt')
                 sleep(time)
     except ConnectionError:
         printError('Error en la conexion, tal vez el servidor no esta arriba.',True)
     finally:
         print_report('\nSe encontraron: %d archivos en el servidor'%cont,report)
+        print '\n'
         return cont
 
 
@@ -302,7 +304,8 @@ def check_subdirs(opts, cms_json, cms_root):
         #iteramos sobre todos los subdirs dados
         for s in cms_json['check_subdirs'].keys():
             #if head(concat(cms_root, cms_json['check_subdirs'][s], True)).status_code == 200:
-            code = head(concat(opts.url, cms_json['check_subdirs'][s], True)).status_code
+            print 'Haciendo HEAD: '+ concat(cms_root, cms_json['check_subdirs'][s], True)
+            code = head(concat(cms_root, cms_json['check_subdirs'][s], True)).status_code
             if code == 200 or code == 403:
                 #Existe al menos un subdirectorio dado, lo que nos dice que si es el
                 #CMS esperado
