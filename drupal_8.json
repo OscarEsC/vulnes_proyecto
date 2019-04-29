@@ -10,8 +10,8 @@
 	},
 "check_version" : {
 	"1" : "core/CHANGELOG.txt;Drupal ",
-	"2" : ";content=",
-    "3" : "core/lib/Drupal.php;VERSION"
+    "2" : "core/lib/Drupal.php;VERSION",
+	"3" : ";content="
 	},
 "check_login" : "user/login",
 "check_root" : {

@@ -351,13 +351,13 @@ def check_version(cms_root, opts, cms_json):
             #anteriores y 30 inmediatos posteriores
             #patron_founded = search('(.{1,20}' + patron + '.{1,30})', get(concat(cms_root, resource)).text)
             print concat(cms_root, resource)
-            patron_founded = search('(.{1,20}' + patron + '.{1,30})', get(concat(cms_root, resource)).text)
+            patron_founded = search('(.{0,20}' + patron + '.{1,30})', get(concat(cms_root, resource)).text)
             if patron_founded:
                 #Dentro de este string buscamos el numero de version nn.nn.nn
-                version = search(patron + '.*([1-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2})', patron_founded.group(1))
+                version = search(patron + '.*([1-9]{1,2}\.?[0-9]{0,2}\.?[0-9]{0,2})', patron_founded.group(1))
                 if version:
                     print_verbose('Version encontrada!!!!', opts.verbose)
-                    print_verbose("----------> Version: " + version.group(1)  + " <----------", opt.verbose)
+                    print_verbose("----------> Version: " + version.group(1)  + " <----------", opts.verbose)
                     print_report('Version del CMS encontrada:    ' + version.group(1), opts.report)
 
                     return True
