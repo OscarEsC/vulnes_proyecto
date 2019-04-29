@@ -15,5 +15,17 @@
 	"1" : "/;generator",
 	"2" : "/wp-login.php;ver="
 	},
-"check_login" : "/wp-login.php"
+"check_login" : "/wp-login.php",
+"check_root" : {
+	"1" : "wp-admin",
+	"2" : "wp-content",
+	"3" : "wp-includes",
+	"4" : "wp-config.php",
+	"5" : "wp-mail.php",
+	"6" : "wp-settings.php",
+	"7" : "signup.php",
+	"8" : "wp-trackback.php",
+	"9" : "wp-cron.php",
+	"10" : "wp-load.php"
+	}
 }
