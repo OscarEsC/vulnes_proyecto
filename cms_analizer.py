@@ -129,7 +129,7 @@ def metodos_http(url):
     	salida:	cadena con informacion de los metodos habilitados
     '''
 
-    salida="Metodos http que contiene la direccion:\n"
+    salida="\nMetodos http que contiene la direccion:\n"
     if put(url).status_code == 200:
         salida+= "Tiene metodo put\n"
     if get(url).status_code == 200:
@@ -144,7 +144,7 @@ def metodos_http(url):
         salida+= "Tiene metodo head\n"
     if patch(url).status_code == 200:
         salida+= "Tiene metodo patch\n"
-    return salida
+    return salida[:-1]
 
 
 def informacion(url):
@@ -218,9 +218,9 @@ def make_requests(url, verbose, user_agent, report, files, extractv=True, method
             headers={}
             headers['User-agent']=choice(user_agent)
             response=s.get(url_file,headers=headers)
-            if (response.status_code == 200 or response.status_code > 300 or response.status_code > 403) and (response.status_code < 400):
+            if (response.status_code == 200 or response.status_code == 403):
                 leng = len(response.content)
-                message='\t%s : File found    (CODE:%d   |   lenght:%d)' %(fl,leng,response.status_code)
+                message='\t%s : File found    (CODE:%d   |   lenght:%d)' %(fl,response.status_code,leng)
                 #print_verbose(message, verbose)
                 print(message)
                 print_report(message, report)
@@ -233,8 +233,8 @@ def make_requests(url, verbose, user_agent, report, files, extractv=True, method
     except ConnectionError:
         printError('Error en la conexion, tal vez el servidor no esta arriba.',True)
     finally:
-        print_report('\nSe encontraron: %d archivos en el servidor'%cont,report)
-        print '\n'
+        print_report('Se encontraron: %d archivos en el servidor'%cont,report)
+        print_verbose('Se encontraron: %d archivos en el servidor'%cont,verbose)
         return cont
 
 
@@ -276,7 +276,6 @@ def get_root(opts,files):
     """
     pos=[]
     found = []
-    print files.values()
     user_agent=make_agent('user_agents.txt')
     recursos = opts.url.split('/')[3:]
     urls = ['/'+'/'.join(recursos[:x+1]) for x in range(len(recursos))]
@@ -284,11 +283,13 @@ def get_root(opts,files):
     url= opts.url.replace(urls[-1],'')
     for u in urls:
         full_url = url+u
-        print full_url
         n = make_requests(full_url, opts.verbose, user_agent, opts.report,files.values())
         pos.append(full_url)
         found.append(n)
-    root = pos[found.index(max(found))]
+    root = pos[found.index(max(found))][:-1]
+    msg = 'Raiz del CMS: '+root+'\n'
+    print_verbose(msg,opts.verbose)
+    print_report(msg,opts.report)
     return root
 
 def check_subdirs(opts, cms_json, cms_root):
@@ -304,7 +305,7 @@ def check_subdirs(opts, cms_json, cms_root):
         #iteramos sobre todos los subdirs dados
         for s in cms_json['check_subdirs'].keys():
             #if head(concat(cms_root, cms_json['check_subdirs'][s], True)).status_code == 200:
-            print 'Haciendo HEAD: '+ concat(cms_root, cms_json['check_subdirs'][s], True)
+            print_verbose('Haciendo HEAD: '+ concat(cms_root, cms_json['check_subdirs'][s], True), opts.verbose)
             code = head(concat(cms_root, cms_json['check_subdirs'][s], True)).status_code
             if code == 200 or code == 403:
                 #Existe al menos un subdirectorio dado, lo que nos dice que si es el
@@ -329,8 +330,8 @@ def check_version(cms_root, opts, cms_json):
     """
         Funcion que busca la version del cms a partir de los recursos
         y los patrones de busqueda dados en el json.
+
         Devuelve True si encuentra la version, False en caso contrario
-    
     """
     #Revisamos que exista la llave 'check_version' en el json
     if 'check_version' in cms_json.keys():
@@ -343,7 +344,8 @@ def check_version(cms_root, opts, cms_json):
             #buscamos el patron en el codigo fuente del recurso, obteniendo 20 caracteres inmediatos
             #anteriores y 30 inmediatos posteriores
             #patron_founded = search('(.{1,20}' + patron + '.{1,30})', get(concat(cms_root, resource)).text)
-            patron_founded = search('(.{1,20}' + patron + '.{1,30})', get(concat(opts.url, resource)).text)
+            print concat(cms_root, resource)
+            patron_founded = search('(.{1,20}' + patron + '.{1,30})', get(concat(cms_root, resource)).text)
             if patron_founded:
                 #Dentro de este string buscamos el numero de version nn.nn.nn
                 version = search(patron + '.*([1-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2})', patron_founded.group(1))
@@ -420,7 +422,7 @@ def check_login(cms_root, opts, cms_json):
     if 'check_login' in cms_json.keys():
         #obtenemos la url del recurso de login
         #login_page = concat(cms_root, cms_json['check_login'])
-        login_page = concat(opts.url, cms_json['check_login'])
+        login_page = concat(cms_root, cms_json['check_login'])
         
         print_verbose('\nBuscando usuarios comunes en: ' + login_page +"\n", opts.verbose)
         
@@ -443,7 +445,6 @@ def main_cms_analizer():
     #En este punto ya se reviso existencia de -u y -c
     cms_json = read_cmsJSON(opts)
     cms_root = get_root(opts,cms_json["check_root"])
-    print 'Raiz del CMS: '+cms_root
 
     if check_subdirs(opts, cms_json, cms_root):
         #Se prosigue con la ejecucion si se reconocio el CMS
