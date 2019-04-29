@@ -1,0 +1,31 @@
+{
+"cms": "Drupal",
+"check_subdirs" : {
+	"1" : "core",
+	"2" : "modules",
+	"3" : "vendor"
+	},
+"check_files" : {
+	"1" : "user/login"
+	},
+"check_version" : {
+	"1" : "/core/CHANGELOG.txt;Drupal",
+	"2" : "/core/CHANGELOG.txt"
+	},
+"check_login" : "user/login",
+"check_root" : {
+    "1" : "autoload.php",
+    "2" : "core",
+    "3" : "index.php",
+    "4" : "LICENSE.txt",
+    "5" : "modules",
+    "6" : "profiles",
+    "7" : "README.txt",
+    "8" : "robots.txt",
+    "9" : "sites",
+    "10" : "themes",
+    "11" : "update.php",
+    "12" : "vendor",
+    "13" : "web.config"
+    }
+}
