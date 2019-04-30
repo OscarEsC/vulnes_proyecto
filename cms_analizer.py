@@ -207,14 +207,15 @@ def make_requests(url, verbose, user_agent, report, files, extractv=True, method
             message1 = metodos_http(url)
             print_verbose(message1,verbose)
             print_report(message1,report)
-        if extractv:
+        """if extractv:
             server,powered,cms=informacion(url)
             print_verbose(server,verbose)
             print_verbose(powered,verbose)
             print_verbose(cms,verbose)
             print_report(server,report)
             print_report(powered,report)
-            print_report(cms,report)
+            print_report(cms,report)"""
+
         for fl in files:
             fl = fl.strip('\n')
             url_file=url+fl
@@ -280,21 +281,15 @@ def get_root(opts,files):
     """
     pos=[]
     found = []
+    files_v = files.values()
     user_agent=make_agent('user_agents.txt')
     recursos=urlparse(opts.url).path.split("/")[1:]
     urls = ['/'+'/'.join(recursos[:x+1]) for x in range(len(recursos))]
     urls.insert(0,'/')
     url= urlparse(opts.url).scheme+'://'+urlparse(opts.url).netloc
-    print "######################"
-    print urls
-    print url
-    print "######################"
     for u in urls:
         full_url = url+u
-        print "$$$"
-        print full_url
-        print "$$$"
-        n = make_requests(full_url, opts.verbose, user_agent, opts.report,files.values())
+        n = make_requests(full_url, opts.verbose, user_agent, opts.report,files_v)
         pos.append(full_url)
         found.append(n)
     root = pos[found.index(max(found))][:-1]
