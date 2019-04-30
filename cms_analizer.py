@@ -463,6 +463,49 @@ def check_login(cms_root, opts, cms_json):
         print_report('No existe campo check_list en el json dado', opts.report)
         printError('No existe campo check_list en el json dado')
 
+
+def get_installed_plugins(opts, cms_json, cms_root):
+    """
+        Funcion que consulta los plugins instalados dentro del CMS
+        Solo busca los n plugins instalados, n esta definida en num_plugins
+        retorna la lista con los plugins instalados
+    """
+    #Se valida que existan estos campos en el JSON
+    if 'plugins' in cms_json.keys() and 'plugins_dir' in cms_json.keys():
+        #Lista donde se almacenan los plugins instalados
+        installed_plugins = []
+        try:
+            with open(cms_json['plugins'], "r") as plugins_file:
+                print_verbose('Buscando plugins instalados dentro del CMS', opts.verbose)
+                print_report('\n\tPlugins:', opts.report)
+                #Iteramos sobre num_plugins plugins dentro del archivo
+                for x in range(opts.num_plugins):
+                    #Se le quita el salto de linea
+                    plugin = plugins_file.readline()[:-1]
+                    #Se obtiene la ruta absoluta al plugin
+                    url2plugin = concat(concat(cms_root, cms_json['plugins_dir']),plugin)
+                    s=session()
+                    headers={}
+                    headers['User-agent']=choice(make_agent('user_agents.txt'))
+                    response=head(url2plugin, headers=headers)
+                    #Si se obtiene respuesta 200 o 403, es que este recurso existe
+                    if (response.status_code == 200 or response.status_code == 403):
+                        installed_plugins.append(plugin)
+
+                        print_verbose('El plugin ' + plugin + ' esta instalado en el CMS', opts.verbose)
+                        print_report("El plugin " + plugin + " esta instalado en el CMS", opts.report)
+
+        except IOError:
+            print_report('Error al abrir el archivo dado en plugins', opts.report)
+            printError('Error al intentar leer el archivo',True) 
+
+    else:
+        print_report('No se encontraron en el JSON las llaves necesarias: \n plugins y plugins_dir', opts.report)
+        printError('Error en el json dado',True)
+
+
+
+
 def main_cms_analizer():
     """
         Funcion principal del script
@@ -474,29 +517,16 @@ def main_cms_analizer():
     checkOptions(opts)
     #En este punto ya se reviso existencia de -u y -c
     cms_json = read_cmsJSON(opts)
-    cms_root = get_root(opts,cms_json["check_root"])
-
+    #cms_root = get_root(opts,cms_json["check_root"])
+    cms_root = opts.url
     if check_subdirs(opts, cms_json, cms_root):
         #Se prosigue con la ejecucion si se reconocio el CMS
         cms_detected = cms_json['cms']
         
         check_version(cms_root, opts, cms_json)
         check_backups(cms_root, opts)
-        check_login(cms_root, opts, cms_json)
-
-    """
-    protocol = verify_url(opts.url)
-    create_report(opts.url, opts, opts.report)
-    if opts.useragent == None or opts.useragent=='':
-        user_agent=make_agent('user_agents.txt')
-    else:
-        user_agent=make_agent(opts.useragent)        
-    make_requests(opts.url, opts.verbose, user_agent, protocol, opts.report)
-
-    #except Exception as e:
-    printError('An unexpected error happend :(')
-    printError(e, True)
-    """
+        get_installed_plugins(opts, cms_json, cms_root)
+        #check_login(cms_root, opts, cms_json)
 
 
 if __name__ == '__main__':
