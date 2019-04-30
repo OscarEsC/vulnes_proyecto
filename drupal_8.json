@@ -30,6 +30,5 @@
     "13" : "web.config"
     },
 "plugins_dir" : "/core/modules",
-"plugins" : "dru_plug.txt"
-
+"plugins" : "dru_plugins.txt"
 }

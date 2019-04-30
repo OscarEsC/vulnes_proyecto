@@ -17,9 +17,9 @@
 	},
 "check_login" : "/wp-login.php",
 "check_root" : {
-	"1" : "wp-admin",
-	"2" : "wp-content",
-	"3" : "wp-includes",
+	"1" : "wp-admin/",
+	"2" : "wp-content/",
+	"3" : "wp-includes/",
 	"4" : "wp-config.php",
 	"5" : "wp-mail.php",
 	"6" : "wp-settings.php",
@@ -29,5 +29,7 @@
 	"10" : "wp-load.php"
 	},
 "plugins_dir" : "wp-content/plugins/",
-"plugins" : "wp-plugins_list.txt"
+"plugins" : "wp-plugins_list.txt",
+"themes_dir" : "wp-content/themes/",
+"themes" : "wp-themes.txt"
 }
