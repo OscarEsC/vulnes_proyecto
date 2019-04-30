@@ -18,6 +18,7 @@ import httplib
 import ssl
 import OpenSSL
 import json
+from urlparse import urlparse
 from BeautifulSoup import BeautifulSoup
 from time import sleep
 from requests import get, put, options, post, delete, head, patch, session
@@ -64,7 +65,7 @@ def print_verbose(message,verbose):
     if verbose and len(message)>1:
         print message
 
-    
+
 def checkOptions(options):
     '''
     Funcion que verifica las opciones minimas para que el programa pueda correr correctamente, en caso de no cumplir con los requerimientos minimos
@@ -76,7 +77,7 @@ def checkOptions(options):
     if options.config is None:
         printError('Desbes especificar un archivo de configuracion',True)
 
- 
+
 def verify_url(url):
     '''
     Funcion que verifica los argumentos minimos para poder ejecutar el programa
@@ -85,13 +86,13 @@ def verify_url(url):
     https_re=r"(https://.*[:][0-9]{3}(/.*)?/$)"
     if not search(http_re,url):
         printError('URL no valida:%s'%url,True)
-      
+
 
 def printError(msg, exit = False):
 
     '''
     Esta funcion imprime en la salida de error estandar un mensaje
-    Recibe:	
+    Recibe:
 	msg:	mensaje a imprimir y exit:  exit el cual indica si el el programa termina su ejecucion o no
 	exit:	Si es True termina la ejecucion del programa
     '''
@@ -113,8 +114,8 @@ def create_report(webpage, options, report_file):
 def print_report(message, report_file):
     '''
     Esta funcion escribe un mensaje en el archivo de reporte"
-    Recibe:	
-    	message: el mensaje a imprimir en el archivo de resultados
+    Recibe:
+        message: el mensaje a imprimir en el archivo de resultados
     '''
     with open(report_file,'a') as f_report:
         f_report.write(message+'\n')
@@ -125,9 +126,9 @@ def metodos_http(url):
     '''
     Esta funcion se encarga de revisar los metodos http habilitados en un servidor
     Recibe:
-    	url:	servidor a analizar
+        url:	servidor a analizar
     Regresa:
-    	salida:	cadena con informacion de los metodos habilitados
+        salida:	cadena con informacion de los metodos habilitados
     '''
 
     salida="\nMetodos http que contiene la direccion:\n"
@@ -250,9 +251,9 @@ def read_cmsJSON(opts):
         print_verbose('Leyendo archivo ' + opts.config, opts.verbose)
         print_report('Se intenta leer el archivo ' + opts.config, opts.report)
         return json.loads(open(opts.config).read())
-    
+
     except IOError:
-        printError('El archivo ' + opts.config + ' no existe o no se tiene permisos de lectura',True)    
+        printError('El archivo ' + opts.config + ' no existe o no se tiene permisos de lectura',True)
     except ValueError:
         printError('El archivo ' + opts.config + ' no es formato JSON', True)
 
@@ -278,15 +279,17 @@ def get_root(opts,files):
     pos=[]
     found = []
     user_agent=make_agent('user_agents.txt')
-    recursos = opts.url.split('/')[3:]
+    recursos=urlparse(opts.url).path.split('/')[1:]
     urls = ['/'+'/'.join(recursos[:x+1]) for x in range(len(recursos))]
     urls.insert(0,'/')
-    url= opts.url.replace(urls[-1],'')
+    url= urlparse(opts.url).scheme+'://'+urlparse(opts.url).netloc
+    print url
     for u in urls:
         full_url = url+u
         n = make_requests(full_url, opts.verbose, user_agent, opts.report,files.values())
         pos.append(full_url)
         found.append(n)
+    print pos
     root = pos[found.index(max(found))][:-1]
     msg = 'Raiz del CMS: '+root+'\n'
     print_verbose(msg,opts.verbose)
