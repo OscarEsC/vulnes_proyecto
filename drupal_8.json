@@ -28,5 +28,8 @@
     "11" : "update.php",
     "12" : "vendor",
     "13" : "web.config"
-    }
+    },
+"plugins_dir" : "/core/modules",
+"plugins" : "dru_plug.txt"
+
 }

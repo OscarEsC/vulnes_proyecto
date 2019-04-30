@@ -131,7 +131,7 @@ def metodos_http(url):
         salida:	cadena con informacion de los metodos habilitados
     '''
 
-    salida="\nMetodos http que contiene la direccion:\n"
+    salida="Metodos http que contiene la direccion:\n"
     if put(url).status_code == 200:
         salida+= "Tiene metodo put\n"
     if get(url).status_code == 200:
@@ -201,6 +201,8 @@ def make_requests(url, verbose, user_agent, report, files, extractv=True, method
     '''
     cont=0
     try:
+        print_verbose("\nURL para probar: %s"%url,verbose)
+        print_report("URL para probar: %s"%url,report)
         if methods:
             message1 = metodos_http(url)
             print_verbose(message1,verbose)
@@ -279,13 +281,19 @@ def get_root(opts,files):
     pos=[]
     found = []
     user_agent=make_agent('user_agents.txt')
-    recursos=urlparse(opts.url).path.split('/')[1:]
+    recursos=urlparse(opts.url).path.split("/")[1:]
     urls = ['/'+'/'.join(recursos[:x+1]) for x in range(len(recursos))]
     urls.insert(0,'/')
     url= urlparse(opts.url).scheme+'://'+urlparse(opts.url).netloc
+    print "######################"
+    print urls
     print url
+    print "######################"
     for u in urls:
         full_url = url+u
+        print "$$$"
+        print full_url
+        print "$$$"
         n = make_requests(full_url, opts.verbose, user_agent, opts.report,files.values())
         pos.append(full_url)
         found.append(n)
@@ -482,18 +490,20 @@ def get_installed_plugins(opts, cms_json, cms_root):
                 for x in range(opts.num_plugins):
                     #Se le quita el salto de linea
                     plugin = plugins_file.readline()[:-1]
+                    #print "plugin: "+plugin
                     #Se obtiene la ruta absoluta al plugin
                     url2plugin = concat(concat(cms_root, cms_json['plugins_dir']),plugin)
                     s=session()
                     headers={}
                     headers['User-agent']=choice(make_agent('user_agents.txt'))
                     response=head(url2plugin, headers=headers)
+                    #print plugin
                     #Si se obtiene respuesta 200 o 403, es que este recurso existe
                     if (response.status_code == 200 or response.status_code == 403):
                         installed_plugins.append(plugin)
 
-                        print_verbose('El plugin ' + plugin + ' esta instalado en el CMS', opts.verbose)
-                        print_report("El plugin " + plugin + " esta instalado en el CMS", opts.report)
+                        print_verbose('El plugin '+plugin+ ' esta instalado en el CMS', opts.verbose)
+                        print_report("El plugin " + plugin +" esta instalado en el CMS", opts.report)
 
         except IOError:
             print_report('Error al abrir el archivo dado en plugins', opts.report)
@@ -517,8 +527,8 @@ def main_cms_analizer():
     checkOptions(opts)
     #En este punto ya se reviso existencia de -u y -c
     cms_json = read_cmsJSON(opts)
-    #cms_root = get_root(opts,cms_json["check_root"])
-    cms_root = opts.url
+    cms_root = get_root(opts,cms_json["check_root"])
+    #cms_root = opts.url
     if check_subdirs(opts, cms_json, cms_root):
         #Se prosigue con la ejecucion si se reconocio el CMS
         cms_detected = cms_json['cms']
