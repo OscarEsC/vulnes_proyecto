@@ -297,7 +297,6 @@ def get_root(opts,files):
         n = make_requests(full_url, opts.verbose, user_agent, opts.report,files.values())
         pos.append(full_url)
         found.append(n)
-    print pos
     root = pos[found.index(max(found))][:-1]
     msg = 'Raiz del CMS: '+root+'\n'
     print_verbose(msg,opts.verbose)
