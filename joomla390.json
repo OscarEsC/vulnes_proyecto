@@ -26,5 +26,7 @@
     "8" : "language",
     "9" : "libraries",
     "10" : "modules"
-    }
+    },
+"plugins_dir" : "/plugins/",
+"plugins" : "joo_plugins.txt"
 }
