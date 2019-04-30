@@ -354,14 +354,20 @@ def check_version(cms_root, opts, cms_json):
             patron_founded = search('(.{0,20}' + patron + '.{1,30})', get(concat(cms_root, resource)).text)
             if patron_founded:
                 #Dentro de este string buscamos el numero de version nn.nn.nn
-                version = search(patron + '.*([1-9]{1,2}\.?[0-9]{0,2}\.?[0-9]{0,2})', patron_founded.group(1))
+                version = search(patron + '.*([1-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2})', patron_founded.group(1))
+                version2 = search(patron + '.*([1-9]{1,2}\.?[0-9]{0,2}\.?[0-9]{0,2})', patron_founded.group(1))
                 if version:
                     print_verbose('Version encontrada!!!!', opts.verbose)
                     print_verbose("----------> Version: " + version.group(1)  + " <----------", opts.verbose)
                     print_report('Version del CMS encontrada:    ' + version.group(1), opts.report)
-
                     return True
-    
+
+                elif version2:
+                    print_verbose('Version encontrada!!!!', opts.verbose)
+                    print_verbose("----------> Version: " + version2.group(1)  + " <----------", opts.verbose)
+                    print_report('Version del CMS encontrada:    ' + version2.group(1), opts.report)
+                    return True
+
     else:
         printError('No se encontro la llave check_version en el json dado')
         print_report('No se asigno valor a check_version en el json dado', opts.report)
@@ -377,7 +383,7 @@ def list_user(opts, login_page, user_log, password_log, error_regex):
 
         Retorna una lista con todos los usuarios validos encontrados se
         almacenan en una lista.
-        
+
         user_log es el nombre del input para la cuenta de usuario dentro del
         formulario. password_log es el nombre del input de la contrasena dentro
         del mismo
