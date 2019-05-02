@@ -28,7 +28,6 @@ from re import findall
 from re import compile
 from datetime import datetime
 from random import choice
-import os
 
 #Usada para almacenar el cms detectado en la ejecucion
 #la usamos para definir el post en check_login
@@ -429,7 +428,10 @@ def list_user(opts, login_page, user_log, password_log, error_regex):
                             err = str(findall(compile(error_regex), r.text)[0])
                         except Exception:
                             err = ''
-
+                        for m in cms_ipblock:
+                            if m in r.text:
+                                print_verbose("La direccion IP fue bloqueada por el CMS",opts.verbose)
+                                #return
                         if err in error_regex:
                             print_verbose('El usuario ' + user + ' Es un posible usuario valido!', opts.verbose)
                             valid_users.append(user)
