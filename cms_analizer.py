@@ -550,7 +550,7 @@ def check_themes(cms_root, opts, cms_json):
                 headers={}
                 headers['User-agent']=choice(make_agent('user_agents.txt'))
                 response=head(url2theme, headers=headers)
-                cad = 'Buscando el tema: ' +url2theme
+                cad = 'Buscando el tema: ' + url2theme
                 print_one(cad,opts.verbose),
                 #Si se obtiene respuesta 200 o 403, es que este recurso existe
                 if ((response.status_code >= 200 and response.status_code < 400) or response.status_code == 403):
@@ -558,6 +558,25 @@ def check_themes(cms_root, opts, cms_json):
                     print_report('El tema '+theme +' fue encontrado',opts.report)
                 if cont == opts.num_plugins:
                     break
+
+def check_files(opts, cms_json, cms_root):
+    if 'check_files' in cms_json.keys():
+        print_report('\n\tArchivos con informacion sensible:\n', opts.report)
+        print_verbose('\nArchivos con informacion sensible:\n', opts.verbose)
+        for f_file in cms_json['check_files'].values():
+            print_verbose('Buscando el archivo ' + f_file, opts.verbose)
+            url2file = concat(cms_root, f_file)
+            s=session()
+            headers={}
+            headers['User-agent']=choice(make_agent('user_agents.txt'))
+            response=head(url2file, headers=headers)
+            if ((response.status_code >= 200 and response.status_code < 400) or response.status_code == 403):
+                print_report('Se ha encontrado el archivo ' + f_file, opts.report)
+                print_verbose('\tEste archivo si existe', opts.verbose)
+    else:
+        print_report('No se han dado la llave check_files para buscar archivos sensibles:', opts.report)
+        printError('No se ha encontrado la llave check_files en el json', True)
+
 def print_one(cad,verbose):
     if verbose:
         print(cad.ljust(90)+"\r"),
@@ -584,6 +603,8 @@ def main_cms_analizer():
         cms_detected = cms_json['cms']
         check_version(cms_root, opts, cms_json)
         check_backups(cms_root, opts)
+        check_files(opts, cms_json,cms_root)
+        print "\n\n\n"
         get_installed_plugins(opts, cms_json, cms_root)
         check_login(cms_root, opts, cms_json)
         check_themes(cms_root, opts, cms_json)

@@ -30,6 +30,8 @@
 	},
 "plugins_dir" : "wp-content/plugins/",
 "plugins" : "wp-plugins_list.txt",
-"themes_dir" : "wp-content/themes/",
+"themes_dir" : {
+	"1" : "wp-content/themes/"
+},
 "themes" : "wp-themes.txt"
 }
