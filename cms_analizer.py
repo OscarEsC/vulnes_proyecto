@@ -70,7 +70,7 @@ def print_verbose(message,verbose):
     Funcion que recibe un mensaje como parametro, el cual dira que es lo que esta haciendo.
     '''
     if verbose and len(message)>1:
-        print message
+        print (message)
 
 
 def checkOptions(options):
@@ -113,7 +113,7 @@ def create_report(webpage, options, report_file):
     Esta funcion crea el archivo de reporte
     '''
     with open(report_file, 'w') as f_report:
-        print 'El archivo: "' + report_file + '", sera creado con la informacion del reporte'
+        print ('El archivo: "' + report_file + '", sera creado con la informacion del reporte')
         f_report.write(' Archivo reporte '.center(70,'=')+'\n\n')
         f_report.write('Hora de ejecucion: ' + str(datetime.now()) + '\n' + 'Server analizado: ' + webpage + '\n' + 'Opciones de ejecucion: ' + str(options)[1:-1].replace("'",'') + '\n')
 
@@ -208,8 +208,8 @@ def make_requests(url, verbose, user_agent, report, files, extractv=True, method
     '''
     cont=0
     try:
-        print_verbose("\nURL para probar: %s"%url,verbose)
-        print_report("URL para probar: %s"%url,report)
+        print_verbose("\n#######  URL: %s #######"%url,verbose)
+        print_report("\n####### RL: %s #######"%url,report)
         if methods:
             message1 = metodos_http(url)
             print_verbose(message1,verbose)
@@ -230,7 +230,7 @@ def make_requests(url, verbose, user_agent, report, files, extractv=True, method
             headers={}
             headers['User-agent']=choice(user_agent)
             response=s.get(url_file,headers=headers)
-            if (response.status_code == 200 or response.status_code == 403):
+            if ((response.status_code >= 200 and response.status_code < 400)or response.status_code == 403):
                 leng = len(response.content)
                 message='\t%s : File found    (CODE:%d   |   lenght:%d)' %(fl,response.status_code,leng)
                 #print_verbose(message, verbose)
@@ -340,7 +340,7 @@ def check_subdirs(opts, cms_json, cms_root):
 
 
 def check_backups(cms_root, opts):
-    print "si"
+    print ("si")
     #falta
 
 
@@ -362,7 +362,7 @@ def check_version(cms_root, opts, cms_json):
             #buscamos el patron en el codigo fuente del recurso, obteniendo 20 caracteres inmediatos
             #anteriores y 30 inmediatos posteriores
             #patron_founded = search('(.{1,20}' + patron + '.{1,30})', get(concat(cms_root, resource)).text)
-            print concat(cms_root, resource)
+            print (concat(cms_root, resource))
             patron_founded = search('(.{0,20}' + patron + '.{1,30})', get(concat(cms_root, resource)).text)
             if patron_founded:
                 #Dentro de este string buscamos el numero de version nn.nn.nn
@@ -433,7 +433,7 @@ def list_user(opts, login_page, user_log, password_log, error_regex):
                                 print_verbose("La direccion IP fue bloqueada por el CMS",opts.verbose)
                                 #return
                         if err in error_regex:
-                            print_verbose('El usuario ' + user + ' Es un posible usuario valido!', opts.verbose)
+                            print_verbose('El usuario ' + user + ' Es un posible usuario valido\n', opts.verbose)
                             valid_users.append(user)
                             break
         if len(valid_users) > 0 and len(valid_users) != cont:
@@ -483,7 +483,6 @@ def check_login(cms_root, opts, cms_json):
             print_verbose("Joomla no expone informacion de las cuentas registradas", opts.verbose)
             print_report("Joomla no expone informacion de las cuentas registradas", opts.report)
         if cms_detected == 'Drupal':
-            print "########################### LOGIN"
             #obtenemos los valores respectivos necesarios de commmons_cms
             list_user(opts, login_page, commons_cms['Drupal'][0], commons_cms['Drupal'][1], commons_cms['Drupal'][2])        
 
@@ -499,6 +498,7 @@ def get_installed_plugins(opts, cms_json, cms_root):
         Solo busca los n plugins instalados, n esta definida en num_plugins
         retorna la lista con los plugins instalados
     """
+    cont = 0
     #Se valida que existan estos campos en el JSON
     if 'plugins' in cms_json.keys() and 'plugins_dir' in cms_json.keys():
         #Lista donde se almacenan los plugins instalados
@@ -508,24 +508,26 @@ def get_installed_plugins(opts, cms_json, cms_root):
                 print_verbose('Buscando plugins instalados dentro del CMS', opts.verbose)
                 print_report('\n\tPlugins:', opts.report)
                 #Iteramos sobre num_plugins plugins dentro del archivo
-                for x in range(opts.num_plugins):
+                for plugin in plugins_file:
+                    cont += 1
                     #Se le quita el salto de linea
-                    plugin = plugins_file.readline()[:-1]
-                    #print "plugin: "+plugin
+                    plugin = plugin[:-1]
                     #Se obtiene la ruta absoluta al plugin
                     url2plugin = concat(concat(cms_root, cms_json['plugins_dir']),plugin)
                     s=session()
                     headers={}
                     headers['User-agent']=choice(make_agent('user_agents.txt'))
                     response=head(url2plugin, headers=headers)
-                    #print plugin
+                    sleep(0.05)
+                    print_one('Buscando el plugin: '+plugin,opts.verbose)
                     #Si se obtiene respuesta 200 o 403, es que este recurso existe
-                    if (response.status_code == 200 or response.status_code == 403):
+                    if ((response.status_code >= 200 and response.status_code<400) or response.status_code == 403):
                         installed_plugins.append(plugin)
 
                         print_verbose('El plugin '+plugin+ ' esta instalado en el CMS', opts.verbose)
                         print_report("El plugin " + plugin +" esta instalado en el CMS", opts.report)
-
+                    if cont == opts.num_plugins:
+                        break
         except IOError:
             print_report('Error al abrir el archivo dado en plugins', opts.report)
             printError('Error al intentar leer el archivo',True) 
@@ -534,6 +536,32 @@ def get_installed_plugins(opts, cms_json, cms_root):
         print_report('No se encontraron en el JSON las llaves necesarias: \n plugins y plugins_dir', opts.report)
         printError('Error en el json dado',True)
 
+def check_themes(cms_root, opts, cms_json):
+    print_verbose("\nBuscando temas displnibles",opts.verbose)
+    print_report("\n\tTemas",opts.report)
+    for directory in cms_json['themes_dir'].values():
+        cont = 0
+        with open(cms_json['themes']) as themes_list:
+            for theme in themes_list:
+                cont += 1
+                theme = theme[:-1]
+                url2theme = concat(concat(cms_root, directory),theme)
+                s=session()
+                headers={}
+                headers['User-agent']=choice(make_agent('user_agents.txt'))
+                response=head(url2theme, headers=headers)
+                cad = 'Buscando el tema: ' +url2theme
+                print_one(cad,opts.verbose),
+                #Si se obtiene respuesta 200 o 403, es que este recurso existe
+                if ((response.status_code >= 200 and response.status_code < 400) or response.status_code == 403):
+                    print_verbose('El tema '+theme +' fue encontrado',opts.verbose)
+                    print_report('El tema '+theme +' fue encontrado',opts.report)
+                if cont == opts.num_plugins:
+                    break
+def print_one(cad,verbose):
+    if verbose:
+        print(cad.ljust(90)+"\r"),
+        sys.stdout.flush()
 
 
 
@@ -542,6 +570,7 @@ def main_cms_analizer():
         Funcion principal del script
     """
     #try:
+    #sleep(5)
     global cms_detected
     opts = addOptions()
     create_report(opts.url, opts, opts.report)
@@ -553,12 +582,11 @@ def main_cms_analizer():
     if check_subdirs(opts, cms_json, cms_root):
         #Se prosigue con la ejecucion si se reconocio el CMS
         cms_detected = cms_json['cms']
-        
         check_version(cms_root, opts, cms_json)
         check_backups(cms_root, opts)
         get_installed_plugins(opts, cms_json, cms_root)
         check_login(cms_root, opts, cms_json)
-
+        check_themes(cms_root, opts, cms_json)
 
 if __name__ == '__main__':
     main_cms_analizer()

@@ -1,3 +1,7 @@
+action
+aggregator
+automated_cron
+ban
 AdInsight_Clarity
 AllPlayers
 AudioRecordingField
@@ -19,6 +23,10 @@ FixedDataDropdown
 Flipcard
 FriendFeed
 Gitolite
+basic_auth
+big_pipe
+block
+block_content
 GoSquared
 HappyCaptcha
 Headup
