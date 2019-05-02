@@ -24,8 +24,11 @@ from time import sleep
 from requests import get, put, options, post, delete, head, patch, session
 from requests.exceptions import ConnectionError
 from re import search
+from re import findall
+from re import compile
 from datetime import datetime
 from random import choice
+import os
 
 #Usada para almacenar el cms detectado en la ejecucion
 #la usamos para definir el post en check_login
@@ -37,8 +40,12 @@ cms_root = None
 #Diccionario usado para almacenar nombre de input de formulario para POST de login
 #y el error que se debe buscar
 commons_cms = {
-    'Wordpress': ['log', 'pwd', '<div id="login_error">.*The password you entered for the username <strong>.*</strong> is incorrect.']
+    'Wordpress': ['log', 'pwd', '<div id="login_error">.*The password you entered for the username <strong>.*</strong> is incorrect.'],
+    'Drupal': ['name', 'pass', 'Sorry, too many failed login attempts|Try again later']
 }
+
+#Lista con los mensajes de error cuando una direccion IP es bloqueada
+cms_ipblock = ['from your IP address. This IP address is temporarily blocked']
 
 def addOptions():
     '''
@@ -54,6 +61,7 @@ def addOptions():
     parser.add_option('-w', '--userlist', dest='userlist', default='http_default_users.txt', help='Lista de usuarios existentes a probar en el CMS')
     parser.add_option('-C', '--Common', dest='common', default='common.txt', help='Lista de archivos existentes a probar en el CMS')
     parser.add_option('-n', '--num_plugins', type=int, dest='num_plugins', default=15, help='Numero de plugins instalados a buscar dentro del CMS')
+    parser.add_option('-p', '--passwd', dest='passwd', default='passwd.txt', help='Archivo de contrasenas a probar')
     opts,args = parser.parse_args()
     return opts
 
@@ -393,37 +401,49 @@ def list_user(opts, login_page, user_log, password_log, error_regex):
         formulario. password_log es el nombre del input de la contrasena dentro
         del mismo
     """
+    global cms_detected
+    global cms_ipblock
     #Lista para almacenar los usuarios validos
     valid_users = []
+    headers={}
+    cont = 0
     try:
-        with open(opts.userlist) as userlist:
+        with open(opts.userlist,'r') as userlist:
             for user in userlist:
+                cont += 1
                 #Quitamos el \n del final de la linea leida
-                user = user[:len(user) - 1]
+                user = user[:-1]
+                print_verbose('Peticion con el usuario :' + user, opts.verbose)
                 #En el body ponemos los datos del formulario
-                #La contrasena es indiferente
-                payload = {user_log: user, password_log: 'password'}
-                print_verbose('Peticion con el usuario ' + user, opts.verbose)
+                #Probando con una lista de contrasenas
+                with open(opts.passwd,'r') as passlist:
+                    for passwd in passlist:
+                        headers['User-agent']=choice(make_agent(opts.useragent))
+                        if cms_detected == 'Drupal':
+                            payload = {user_log: user, password_log: passwd,"form_id":"user_login_form"}
+                        else:
+                            payload = {user_log: user, password_log: passwd}
+                        r = post(login_page, data=payload)
+                        #Buscamos el error dado, que depende del cms encontrado
+                        try:
+                            err = str(findall(compile(error_regex), r.text)[0])
+                        except Exception:
+                            err = ''
 
-                r = post(login_page, data=payload)
-                #Buscamos el error dado, que depende del cms encontrado
-                err = search(error_regex, str(r.text))
-
-                if err:
-                    print_verbose('El usuario ' + user + ' Es un usuario valido!', opts.verbose)
-                    valid_users.append(user)
-                
-            if len(valid_users) > 0:
-                print_verbose("Usuarios validos encontrados: ", opts.verbose)
-                print_report("Usuarios validos encontrados: ", opts.report)
-                for usr in valid_users:
-                    print_verbose("\t" + usr, opts.verbose)
-                    print_report( "\t" + user, opts.report)
-            else:
-                print_verbose("No se encontraron usuarios validos", opts.verbose)
-                print_report("No se encontraron usuarios validos", opts.report)
-
-            return valid_users
+                        if err in error_regex:
+                            print_verbose('El usuario ' + user + ' Es un posible usuario valido!', opts.verbose)
+                            valid_users.append(user)
+                            break
+        if len(valid_users) > 0 and len(valid_users) != cont:
+            print_verbose("Usuarios validos encontrados: ", opts.verbose)
+            print_report("Usuarios validos encontrados: ", opts.report)
+            for usr in valid_users:
+                print_verbose("\t" + usr, opts.verbose)
+                print_report( "\t" + user, opts.report)
+        else:
+            print_verbose("No se encontraron usuarios validos", opts.verbose)
+            print_report("No se encontraron usuarios validos", opts.report)
+        return valid_users
 
 
     except IOError:
@@ -460,6 +480,11 @@ def check_login(cms_root, opts, cms_json):
             #usuario-contrasena
             print_verbose("Joomla no expone informacion de las cuentas registradas", opts.verbose)
             print_report("Joomla no expone informacion de las cuentas registradas", opts.report)
+        if cms_detected == 'Drupal':
+            print "########################### LOGIN"
+            #obtenemos los valores respectivos necesarios de commmons_cms
+            list_user(opts, login_page, commons_cms['Drupal'][0], commons_cms['Drupal'][1], commons_cms['Drupal'][2])        
+
     
     else:
         print_report('No existe campo check_list en el json dado', opts.report)
@@ -530,7 +555,7 @@ def main_cms_analizer():
         check_version(cms_root, opts, cms_json)
         check_backups(cms_root, opts)
         get_installed_plugins(opts, cms_json, cms_root)
-        #check_login(cms_root, opts, cms_json)
+        check_login(cms_root, opts, cms_json)
 
 
 if __name__ == '__main__':
