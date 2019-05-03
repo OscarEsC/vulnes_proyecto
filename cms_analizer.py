@@ -237,7 +237,7 @@ def make_requests(url, verbose, user_agent, report, files, extractv=True, method
             response=s.get(url_file,headers=headers)
             if ((response.status_code >= 200 and response.status_code < 400)or response.status_code == 403):
                 leng = len(response.content)
-                message='\t%s : File found    (CODE:%d   |   lenght:%d)' %(url_file,response.status_code,leng)
+                message='\t%s : File found    (CODE:%d|SIZE:%d)' %(url_file,response.status_code,leng)
                 #print_verbose(message, verbose)
                 print(message)
                 print_report(message, report)
@@ -533,7 +533,7 @@ def get_installed_plugins(opts, cms_json, cms_root):
                         headers={}
                         headers['User-agent']=choice(make_agent(opts.useragent))
                         response=head(url2plugin, headers=headers)
-                        sleep(0.05)
+                        #sleep(0.05)
                         print_one('Buscando el plugin: '+plugin,opts.verbose)
                         #Si se obtiene respuesta 200 o 403, es que este recurso existe
 
@@ -572,7 +572,7 @@ def check_themes(cms_root, opts, cms_json):
                         headers['User-agent']=choice(make_agent(opts.useragent))
                         response=head(url2theme, headers=headers)
                         cad = 'Buscando el tema: ' +url2theme
-                        sleep(0.05)
+                        #sleep(0.05)
                         print_one(cad,opts.verbose)
                         #Si se obtiene respuesta 200 o 403, es que este recurso existe
                         if ((response.status_code >= 200 and response.status_code < 400) or response.status_code == 403):
@@ -618,7 +618,6 @@ def main_cms_analizer():
         Funcion principal del script
     """
     #try:
-    #sleep(5)
     global cms_detected
     opts = addOptions()
     create_report(opts.url, opts, opts.report)
