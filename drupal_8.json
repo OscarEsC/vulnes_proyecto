@@ -6,7 +6,8 @@
 	"3" : "vendor"
 	},
 "check_files" : {
-	"1" : "user/login"
+	"1" : "core/authorize.php",
+    "2" : "core/install.php"
 	},
 "check_version" : {
 	"1" : "core/CHANGELOG.txt;Drupal ",
