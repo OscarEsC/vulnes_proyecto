@@ -1,4 +1,4 @@
-# CMS ANALIZER  
+# CMS SCANNER  
 Espinosa Curiel Oscar  
 Manzano Cruz Isaias Abraham  
 ## Dependencias
