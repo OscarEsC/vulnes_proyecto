@@ -29,6 +29,7 @@
     "12" : "vendor",
     "13" : "web.config"
     },
+"check_backups" : "backups.txt",
 "plugins_dir" : "core/modules",
 "plugins" : "dru_plugins.txt",
 "themes_dir" : {

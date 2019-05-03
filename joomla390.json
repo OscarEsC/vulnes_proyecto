@@ -26,7 +26,8 @@
     "8" : "language/",
     "9" : "libraries/",
     "10" : "modules/"
-    },
+	},
+"check_backups" : "backups.txt",
 "plugins_dir" : "/plugins/",
 "plugins" : "joo_plugins.txt"
 }

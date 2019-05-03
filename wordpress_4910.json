@@ -28,6 +28,7 @@
 	"9" : "wp-cron.php",
 	"10" : "wp-load.php"
 	},
+"check_backups" : "backups.txt",
 "plugins_dir" : "wp-content/plugins/",
 "plugins" : "wp-plugins_list.txt",
 "themes_dir" : {
