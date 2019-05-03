@@ -55,11 +55,11 @@ def addOptions():
     parser.add_option('-u','--url', dest='url', default=None, help='Indica la URL para realizar el ataque, formato: {http|https}://{ip|domainname}[/directorio]:puerto')
     parser.add_option('-v', '--verbose', action='store_true',dest='verbose', default=False, help='Si es activado el script mostrara informacion de las peticiones que se realizan')
     parser.add_option('-r', '--report', dest='report', default='reporte.txt', help='Indica el nombre del archivo de reporte')
-    parser.add_option('-U', '--useragent', dest='useragent', default=None, help='Indica el User-Agent a usar, o un archivo con User-Agents')
+    parser.add_option('-U', '--useragent', dest='useragent', default='user_agents.txt', help='Indica el User-Agent a usar, o un archivo con User-Agents')
     parser.add_option('-c', '--config', dest='config', default=None, help='Indica el archivo JSON de configuracion para ejecutar la herramienta')
     parser.add_option('-w', '--userlist', dest='userlist', default='http_default_users.txt', help='Lista de usuarios existentes a probar en el CMS')
     parser.add_option('-C', '--Common', dest='common', default='common.txt', help='Lista de archivos existentes a probar en el CMS')
-    parser.add_option('-n', '--num_plugins', type=int, dest='num_plugins', default=15, help='Numero de plugins instalados a buscar dentro del CMS')
+    parser.add_option('-n', '--num_plugins', type=int, dest='num_plugins', default=15, help='Numero de plugins y temas instalados a buscar dentro del CMS')
     parser.add_option('-p', '--passwd', dest='passwd', default='passwd.txt', help='Archivo de contrasenas a probar')
     opts,args = parser.parse_args()
     return opts
@@ -124,9 +124,10 @@ def print_report(message, report_file):
     Recibe:
         message: el mensaje a imprimir en el archivo de resultados
     '''
-    with open(report_file,'a') as f_report:
-        f_report.write(message+'\n')
-        f_report.close()
+    if report_file != None:
+        with open(report_file,'a') as f_report:
+            f_report.write(message+'\n')
+            f_report.close()
 
 
 def metodos_http(url):
@@ -138,22 +139,23 @@ def metodos_http(url):
         salida:	cadena con informacion de los metodos habilitados
     '''
 
-    salida="Metodos http que contiene la direccion:\n"
+    salida="\tMetodos http que contiene la direccion:{"
     if put(url).status_code == 200:
-        salida+= "Tiene metodo put\n"
+        salida+= "put "
     if get(url).status_code == 200:
-        salida+= "Tiene metodo get\n"
+        salida+= " get"
     if options(url).status_code == 200:
-        salida+= "Tiene metodo options\n"
+        salida+= " options"
     if post(url).status_code == 200:
-        salida+= "Tiene metodo post\n"
+        salida+= " post"
     if delete(url).status_code == 200:
-        salida+= "Tiene metodo delete\n"
+        salida+= " delete"
     if head(url).status_code == 200:
-        salida+= "Tiene metodo head\n"
+        salida+= " head"
     if patch(url).status_code == 200:
-        salida+= "Tiene metodo patch\n"
-    return salida[:-1]
+        salida+= " patch"
+    salida+=' }'
+    return salida
 
 
 def informacion(url):
@@ -209,7 +211,7 @@ def make_requests(url, verbose, user_agent, report, files, extractv=True, method
     cont=0
     try:
         print_verbose("\n#######  URL: %s #######"%url,verbose)
-        print_report("\n####### RL: %s #######"%url,report)
+        print_report("\n####### URL: %s #######"%url,report)
         if methods:
             message1 = metodos_http(url)
             print_verbose(message1,verbose)
@@ -225,28 +227,31 @@ def make_requests(url, verbose, user_agent, report, files, extractv=True, method
 
         for fl in files:
             fl = fl.strip('\n')
-            url_file=url+fl
+            if url[-1] != '/':
+                url_file=url+'/'+fl
+            else:
+                url_file=url+fl
             s=session()
             headers={}
             headers['User-agent']=choice(user_agent)
             response=s.get(url_file,headers=headers)
             if ((response.status_code >= 200 and response.status_code < 400)or response.status_code == 403):
                 leng = len(response.content)
-                message='\t%s : File found    (CODE:%d   |   lenght:%d)' %(fl,response.status_code,leng)
+                message='\t%s : File found    (CODE:%d   |   lenght:%d)' %(url_file,response.status_code,leng)
                 #print_verbose(message, verbose)
                 print(message)
                 print_report(message, report)
                 cont+=1
             else:
-                message='\t%s : File not found    (CODE:%s)' %(fl,str(response.status_code))
+                message='\t%s : File not found    (CODE:%s)' %(url_file,str(response.status_code))
                 print_verbose(message, verbose)
                 #print_report(message, 'Errores_4XX.txt')
                 sleep(time)
     except ConnectionError:
         printError('Error en la conexion, tal vez el servidor no esta arriba.',True)
     finally:
-        print_report('Se encontraron: %d archivos en el servidor'%cont,report)
-        print_verbose('Se encontraron: %d archivos en el servidor'%cont,verbose)
+        print_report('Se encontraron: %d archivos en el servidor\n'%cont,report)
+        print_verbose('Se encontraron: %d archivos en el servidor\n'%cont,verbose)
         return cont
 
 
@@ -259,7 +264,7 @@ def read_cmsJSON(opts):
     """
     try:
         print_verbose('Leyendo archivo ' + opts.config, opts.verbose)
-        print_report('Se intenta leer el archivo ' + opts.config, opts.report)
+        #print_report('Se intenta leer el archivo ' + opts.config, opts.report)
         return json.loads(open(opts.config).read())
 
     except IOError:
@@ -289,20 +294,22 @@ def get_root(opts,files):
     pos=[]
     found = []
     files_v = files.values()
-    user_agent=make_agent('user_agents.txt')
+    user_agent=make_agent(opts.useragent)
     recursos=urlparse(opts.url).path.split("/")[1:]
     urls = ['/'+'/'.join(recursos[:x+1]) for x in range(len(recursos))]
-    urls.insert(0,'/')
+    if '/' not in urls:
+        urls.insert(0,'/')
     url= urlparse(opts.url).scheme+'://'+urlparse(opts.url).netloc
     for u in urls:
         full_url = url+u
-        n = make_requests(full_url, opts.verbose, user_agent, opts.report,files_v)
+        n = make_requests(full_url, opts.verbose, user_agent, None, files_v)
         pos.append(full_url)
         found.append(n)
     root = pos[found.index(max(found))][:-1]
-    msg = 'Raiz del CMS: '+root+'\n'
+    msg = '\n######## Raiz del CMS: '+root+' ########\n'
     print_verbose(msg,opts.verbose)
     print_report(msg,opts.report)
+    make_requests(root, opts.verbose, user_agent, opts.report, files_v)
     return root
 
 def check_subdirs(opts, cms_json, cms_root):
@@ -407,6 +414,8 @@ def list_user(opts, login_page, user_log, password_log, error_regex):
     headers={}
     cont = 0
     try:
+        print_verbose('Buscando usuarios validos en el CMS', opts.verbose)
+        print_report('\n\tUsuarios:', opts.report)
         with open(opts.userlist,'r') as userlist:
             for user in userlist:
                 cont += 1
@@ -445,6 +454,7 @@ def list_user(opts, login_page, user_log, password_log, error_regex):
         else:
             print_verbose("No se encontraron usuarios validos", opts.verbose)
             print_report("No se encontraron usuarios validos", opts.report)
+
         return valid_users
 
 
@@ -521,7 +531,7 @@ def get_installed_plugins(opts, cms_json, cms_root):
                         url2plugin = concat(concat(cms_root, directory),plugin)
                         s=session()
                         headers={}
-                        headers['User-agent']=choice(make_agent('user_agents.txt'))
+                        headers['User-agent']=choice(make_agent(opts.useragent))
                         response=head(url2plugin, headers=headers)
                         sleep(0.05)
                         print_one('Buscando el plugin: '+plugin,opts.verbose)
@@ -549,7 +559,7 @@ def check_themes(cms_root, opts, cms_json):
             except Exception:
                 dirs = [cms_json['themes_dir']]
             print_verbose("\nBuscando temas displnibles",opts.verbose)
-            print_report("\n\tTemas",opts.report)
+            print_report("\n\tTemas:",opts.report)
             for directory in dirs:
                 cont = 0
                 with open(cms_json['themes']) as themes_list:
@@ -559,9 +569,10 @@ def check_themes(cms_root, opts, cms_json):
                         url2theme = concat(concat(cms_root, directory),theme)
                         s=session()
                         headers={}
-                        headers['User-agent']=choice(make_agent('user_agents.txt'))
+                        headers['User-agent']=choice(make_agent(opts.useragent))
                         response=head(url2theme, headers=headers)
                         cad = 'Buscando el tema: ' +url2theme
+                        sleep(0.05)
                         print_one(cad,opts.verbose)
                         #Si se obtiene respuesta 200 o 403, es que este recurso existe
                         if ((response.status_code >= 200 and response.status_code < 400) or response.status_code == 403):
@@ -579,14 +590,14 @@ def check_themes(cms_root, opts, cms_json):
 
 def check_files(opts, cms_json, cms_root):
     if 'check_files' in cms_json.keys():
-        print_report('\n\tArchivos con informacion sensible:\n', opts.report)
-        print_verbose('\nArchivos con informacion sensible:\n', opts.verbose)
+        print_report('\n\tArchivos con informacion sensible:', opts.report)
+        print_verbose('\n\tArchivos con informacion sensible:', opts.verbose)
         for f_file in cms_json['check_files'].values():
             print_verbose('Buscando el archivo ' + f_file, opts.verbose)
             url2file = concat(cms_root, f_file)
             s=session()
             headers={}
-            headers['User-agent']=choice(make_agent('user_agents.txt'))
+            headers['User-agent']=choice(make_agent(opts.useragent))
             response=head(url2file, headers=headers)
             if ((response.status_code >= 200 and response.status_code < 400) or response.status_code == 403):
                 print_report('Se ha encontrado el archivo ' + f_file, opts.report)
