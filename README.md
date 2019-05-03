@@ -38,7 +38,7 @@ Las demas banderas tienen un valor por defecto que se usa en caso de no especifi
 ### Ejecución de la herramienta
 Una vez hecho el Makefile, se ejecuta de la siguiente manera
 ```
-cms_analizer -u <URL_del_aplicativo_objetivo> -c <archivo_JSON_de_configuracion> [opciones] 
+cms_scanner -u <URL_del_aplicativo_objetivo> -c <archivo_JSON_de_configuracion> [opciones] 
 ```
 
 ## Archivos de configuracion
