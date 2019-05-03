@@ -321,20 +321,20 @@ def check_backups(cms_root, cms_json, opts):
                 headers={}
                 #Tipos de compresion comunes en Unix
                 file_type = ['.tar.gz', '.zip', '.gz']
-                print_verbose('\n\tBuscando backups\n', opts.verbose)
+                print_verbose('\n\tBuscando backups', opts.verbose)
+                print_report('\n\tBackups', opts.report)
                 for backup_file in backupF:
                     headers['User-agent']=choice(make_agent(opts.useragent))
                     for ftype in file_type:
                         #nombre del archivo y el tipo de compresion concatenado
-                        backup_file = backup_file[:-1] + ftype
+                        backup_fil = backup_file.replace("\n","")+ ftype
                         #peticion HTTP con la ruta del CMS y el nombre del archivo
-                        response=s.head(concat(cms_root, backup_file) ,headers=headers)
-                        print_one('Buscando el archivo: '+backup_file, opts.verbose)
-
+                        response=s.get(concat(cms_root, backup_fil) ,headers=headers)
+                        print_one('Buscando el archivo: '+backup_fil, opts.verbose)
                         #El archivo existe en el CMS
                         if ((response.status_code >= 200 and response.status_code < 400)or response.status_code == 403):
-                            print_report('Se encontro el archivo ' + backup_file + '\n', opts.report)
-                            print_verbose('Se encontro el archivo ' + backup_file + '\n', opts.verbose)
+                            print_report('Se encontro el archivo ' + backup_fil + '(CODE:%d|SIZE:%d)'%(response.status_code,len(response.content)), opts.report)
+                            print_verbose('Se encontro el archivo ' + backup_fil + '(CODE:%d|SIZE:%d)'%(response.status_code,len(response.content)), opts.verbose)
 
         except:
             print_report('No se pudo abrir el archivo de check_backups', opts.report)
@@ -442,7 +442,7 @@ def list_user(opts, login_page, user_log, password_log, error_regex):
             print_report("Usuarios validos encontrados: ", opts.report)
             for usr in valid_users:
                 print_verbose("\t" + usr, opts.verbose)
-                print_report( "\t" + user, opts.report)
+                print_report( "\t" + usr, opts.report)
         else:
             print_verbose("No se encontraron usuarios validos", opts.verbose)
             print_report("No se encontraron usuarios validos", opts.report)
