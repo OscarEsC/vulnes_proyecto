@@ -1,4 +1,4 @@
-# CMS ANALIZER  
+# CMS SCANNER  
 
 ## Descripcion
 Script que analiza aplicativos Web buscando el CMS que los maneja.
