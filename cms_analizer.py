@@ -305,6 +305,8 @@ def get_root(opts,files):
         n = make_requests(full_url, opts.verbose, user_agent, None, files_v)
         pos.append(full_url)
         found.append(n)
+    if max(found) == 0:
+        printError("No se pudo encontrar la raiz", True)
     root = pos[found.index(max(found))][:-1]
     msg = '\n######## Raiz del CMS: '+root+' ########\n'
     print_verbose(msg,opts.verbose)
