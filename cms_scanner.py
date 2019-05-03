@@ -6,10 +6,6 @@
 #   Manzano Cruz Isaias Abraham
 #   Espinosa Curiel Oscar
 #---------------------------------------------
-#--------------IMPORTANTE---------------------
-#       Instalar BeautifulSoup
-#	    pip install BeautifulSoup
-#---------------------------------------------
 
 import sys
 import optparse
@@ -19,7 +15,6 @@ import ssl
 import OpenSSL
 import json
 from urlparse import urlparse
-from BeautifulSoup import BeautifulSoup
 from time import sleep
 from requests import get, put, options, post, delete, head, patch, session
 from requests.exceptions import ConnectionError
@@ -158,35 +153,6 @@ def metodos_http(url):
     return salida
 
 
-def informacion(url):
-    '''
-    Funcion que recibe como parametro la url y obtiene a traves de los encabezados HTTP informacion del servidor, que tipo de servidor es 'Server' y el 'X-Powered-By' y en caso de utilizar csm muestra cual utiliza, devolviendo el servidor el x-powered-by y el csm, los cuales se escribiran en el reporte.
-    '''
-    #Corregir, no muestra el CMS
-    server = ''
-    powered = ''
-    cms = ''
-    texto1 = "Version del servidor: "
-    texto2 = "X-Powered-By: "
-    texto3 = "CSM: "
-    r = get(url)
-    cabeceras = r.headers
-    html = r.content
-    parsed_html = BeautifulSoup(html)
-    if 'Server' in cabeceras:
-        server = cabeceras['Server']
-        server = texto1 + server
-    if 'X-Powered-By' in cabeceras:
-        powered = cabeceras['X-Powered-By']
-        powered = texto2 + powered
-    for var in parsed_html.findAll('meta'):
-        var2 = var.get('name')
-        if var2 == 'generator':
-            cms = var.get('content')
-            cms = texto3 + csm
-    return server, powered, cms
-
-
 def make_agent(agent):
     '''
     Funcion que devuelve una lista, con los agentes a utiliar en cada peticion
@@ -216,14 +182,6 @@ def make_requests(url, verbose, user_agent, report, files, extractv=True, method
             message1 = metodos_http(url)
             print_verbose(message1,verbose)
             print_report(message1,report)
-        """if extractv:
-            server,powered,cms=informacion(url)
-            print_verbose(server,verbose)
-            print_verbose(powered,verbose)
-            print_verbose(cms,verbose)
-            print_report(server,report)
-            print_report(powered,report)
-            print_report(cms,report)"""
 
         for fl in files:
             fl = fl.strip('\n')
@@ -307,7 +265,7 @@ def get_root(opts,files):
         found.append(n)
     if max(found) == 0:
         printError("No se pudo encontrar la raiz", True)
-    root = pos[found.index(max(found))][:-1]
+    root = pos[found.index(max(found))]
     msg = '\n######## Raiz del CMS: '+root+' ########\n'
     print_verbose(msg,opts.verbose)
     print_report(msg,opts.report)
@@ -348,10 +306,40 @@ def check_subdirs(opts, cms_json, cms_root):
         return False
 
 
-def check_backups(cms_root, opts):
-    print ("si")
-    #falta
+def check_backups(cms_root, cms_json, opts):
+    """
+        Funcion que busca archivos backup en la raiz del CMS
+        los nombres de los archivos los obtiene del archivo definido en el JSON
+        Los concatena con los tipos de compresion mas comunes en Unix
+    """
+    if 'check_backups' in cms_json.keys():
+        try:
+            with open(cms_json['check_backups'], 'r') as backupF:
+                s=session()
+                headers={}
+                #Tipos de compresion comunes en Unix
+                file_type = ['.tar.gz', '.zip', '.gz']
+                print_verbose('\n\tBuscando backups\n', opts.verbose)
+                for backup_file in backupF:
+                    headers['User-agent']=choice(make_agent(opts.useragent))
+                    for ftype in file_type:
+                        #nombre del archivo y el tipo de compresion concatenado
+                        backup_file = backup_file[:-1] + ftype
+                        #peticion HTTP con la ruta del CMS y el nombre del archivo
+                        response=s.head(concat(cms_root, backup_file) ,headers=headers)
+                        print_one('Buscando el archivo: '+backup_file, opts.verbose)
 
+                        #El archivo existe en el CMS
+                        if ((response.status_code >= 200 and response.status_code < 400)or response.status_code == 403):
+                            print_report('Se encontro el archivo ' + backup_file + '\n', opts.report)
+                            print_verbose('Se encontro el archivo ' + backup_file + '\n', opts.verbose)
+
+        except:
+            print_report('No se pudo abrir el archivo de check_backups', opts.report)
+            printError('No se pudo abrir el archivo de check_backups', True)
+    else:
+        print_report('No existe la llave check_backups en el JSON', opts.report)
+        printError('No existe la llave check_backups en el JSON de configuracion', True)
 
 def check_version(cms_root, opts, cms_json):
     """
@@ -423,7 +411,7 @@ def list_user(opts, login_page, user_log, password_log, error_regex):
                 cont += 1
                 #Quitamos el \n del final de la linea leida
                 user = user[:-1]
-                print_verbose('Peticion con el usuario :' + user, opts.verbose)
+                print_verbose('Peticion con el usuario : ' + user, opts.verbose)
                 #En el body ponemos los datos del formulario
                 #Probando con una lista de contrasenas
                 with open(opts.passwd,'r') as passlist:
@@ -461,8 +449,8 @@ def list_user(opts, login_page, user_log, password_log, error_regex):
 
 
     except IOError:
-        print_report('Error al leer el archivo ' + opts.userlist, opts.report)
-        printError('El archivo ' + opts.userlist + ' no existe o no se tiene permisos de lectura')
+        print_report('Error al leer el archivo de usuarios o el de contrasenas' + opts.userlist, opts.report)
+        printError('El archivo de usuarios o el de contrasenas no existe o no se tiene permisos de lectura')
 
 
 def check_login(cms_root, opts, cms_json):
@@ -483,7 +471,7 @@ def check_login(cms_root, opts, cms_json):
         #login_page = concat(cms_root, cms_json['check_login'])
         login_page = concat(cms_root, cms_json['check_login'])
         
-        print_verbose('\nBuscando usuarios comunes en: ' + login_page +"\n", opts.verbose)
+        print_verbose('\n\nBuscando usuarios comunes en: ' + login_page +"\n", opts.verbose)
         
         if cms_detected == 'Wordpress':
             #obtenemos los valores respectivos necesarios de commmons_cms
@@ -592,7 +580,7 @@ def check_themes(cms_root, opts, cms_json):
 
 def check_files(opts, cms_json, cms_root):
     if 'check_files' in cms_json.keys():
-        print_report('\n\tArchivos con informacion sensible:', opts.report)
+        print_report('\n    \n\tArchivos con informacion sensible:', opts.report)
         print_verbose('\n\tArchivos con informacion sensible:', opts.verbose)
         for f_file in cms_json['check_files'].values():
             print_verbose('Buscando el archivo ' + f_file, opts.verbose)
@@ -632,7 +620,7 @@ def main_cms_analizer():
         #Se prosigue con la ejecucion si se reconocio el CMS
         cms_detected = cms_json['cms']
         check_version(cms_root, opts, cms_json)
-        check_backups(cms_root, opts)
+        check_backups(cms_root, cms_json, opts)
         check_files(opts, cms_json,cms_root)
         print "\n\n\n"
         get_installed_plugins(opts, cms_json, cms_root)
