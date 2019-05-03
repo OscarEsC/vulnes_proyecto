@@ -1,4 +1,5 @@
 bootstrap
+bartik
 zen
 adminimal_theme
 omega
@@ -27,6 +28,7 @@ omega_kickstart
 zeropoint
 zircon
 radix
+stark
 sky
 basic
 venture_theme
@@ -47,6 +49,7 @@ multipurpose_zymphonies_theme
 andromeda
 acquia_marina
 bamboo
+classy
 responsive_business
 impact_theme
 genesis
@@ -451,7 +454,6 @@ openpublish_theme
 talata
 black_mamba
 jp_mobile
-stark
 simplicity
 white
 parish_theme
@@ -870,7 +872,6 @@ plainscape
 cdmug
 vigilianty
 exquisite
-bartik
 waves
 tc_modernist
 grumpymonkey
@@ -1634,7 +1635,6 @@ szdug
 1615442
 1616330
 1617472
-classy
 1621552
 1623482
 1624618

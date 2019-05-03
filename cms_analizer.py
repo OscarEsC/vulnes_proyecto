@@ -498,36 +498,41 @@ def get_installed_plugins(opts, cms_json, cms_root):
         Solo busca los n plugins instalados, n esta definida en num_plugins
         retorna la lista con los plugins instalados
     """
-    cont = 0
     #Se valida que existan estos campos en el JSON
     if 'plugins' in cms_json.keys() and 'plugins_dir' in cms_json.keys():
         #Lista donde se almacenan los plugins instalados
         installed_plugins = []
         try:
-            with open(cms_json['plugins'], "r") as plugins_file:
-                print_verbose('Buscando plugins instalados dentro del CMS', opts.verbose)
-                print_report('\n\tPlugins:', opts.report)
-                #Iteramos sobre num_plugins plugins dentro del archivo
-                for plugin in plugins_file:
-                    cont += 1
-                    #Se le quita el salto de linea
-                    plugin = plugin[:-1]
-                    #Se obtiene la ruta absoluta al plugin
-                    url2plugin = concat(concat(cms_root, cms_json['plugins_dir']),plugin)
-                    s=session()
-                    headers={}
-                    headers['User-agent']=choice(make_agent('user_agents.txt'))
-                    response=head(url2plugin, headers=headers)
-                    sleep(0.05)
-                    print_one('Buscando el plugin: '+plugin,opts.verbose)
-                    #Si se obtiene respuesta 200 o 403, es que este recurso existe
-                    if ((response.status_code >= 200 and response.status_code<400) or response.status_code == 403):
-                        installed_plugins.append(plugin)
+            try:
+                dirs = cms_json['plugins_dir'].values()
+            except Exception:
+                dirs = [cms_json['plugins_dir']]
+            print_verbose('Buscando plugins instalados dentro del CMS', opts.verbose)
+            print_report('\n\tPlugins:', opts.report)
+            for directory in dirs:
+                cont = 0
+                with open(cms_json['plugins'], "r") as plugins_file:
+                    #Iteramos sobre num_plugins plugins dentro del archivo
+                    for plugin in plugins_file:
+                        cont += 1
+                        #Se le quita el salto de linea
+                        plugin = plugin[:-1]
+                        #Se obtiene la ruta absoluta al plugin
+                        url2plugin = concat(concat(cms_root, directory),plugin)
+                        s=session()
+                        headers={}
+                        headers['User-agent']=choice(make_agent('user_agents.txt'))
+                        response=head(url2plugin, headers=headers)
+                        sleep(0.05)
+                        print_one('Buscando el plugin: '+plugin,opts.verbose)
+                        #Si se obtiene respuesta 200 o 403, es que este recurso existe
 
-                        print_verbose('El plugin '+plugin+ ' esta instalado en el CMS', opts.verbose)
-                        print_report("El plugin " + plugin +" esta instalado en el CMS", opts.report)
-                    if cont == opts.num_plugins:
-                        break
+                        if ((response.status_code >= 200 and response.status_code<400) or response.status_code == 403):
+                            installed_plugins.append(plugin)
+                            print_verbose('El plugin ('+plugin+ ') esta instalado en el CMS, ruta:      '+url2plugin, opts.verbose)
+                            print_report("El plugin (" + plugin +") esta instalado en el CMS, ruta: "+url2plugin, opts.report)
+                        if cont == opts.num_plugins:
+                            break
         except IOError:
             print_report('Error al abrir el archivo dado en plugins', opts.report)
             printError('Error al intentar leer el archivo',True) 
@@ -537,27 +542,40 @@ def get_installed_plugins(opts, cms_json, cms_root):
         printError('Error en el json dado',True)
 
 def check_themes(cms_root, opts, cms_json):
-    print_verbose("\nBuscando temas displnibles",opts.verbose)
-    print_report("\n\tTemas",opts.report)
-    for directory in cms_json['themes_dir'].values():
-        cont = 0
-        with open(cms_json['themes']) as themes_list:
-            for theme in themes_list:
-                cont += 1
-                theme = theme[:-1]
-                url2theme = concat(concat(cms_root, directory),theme)
-                s=session()
-                headers={}
-                headers['User-agent']=choice(make_agent('user_agents.txt'))
-                response=head(url2theme, headers=headers)
-                cad = 'Buscando el tema: ' + url2theme
-                print_one(cad,opts.verbose),
-                #Si se obtiene respuesta 200 o 403, es que este recurso existe
-                if ((response.status_code >= 200 and response.status_code < 400) or response.status_code == 403):
-                    print_verbose('El tema '+theme +' fue encontrado',opts.verbose)
-                    print_report('El tema '+theme +' fue encontrado',opts.report)
-                if cont == opts.num_plugins:
-                    break
+    if 'themes' in cms_json.keys() and 'themes_dir' in cms_json.keys():
+        try:
+            try:
+                dirs = cms_json['themes_dir'].values()
+            except Exception:
+                dirs = [cms_json['themes_dir']]
+            print_verbose("\nBuscando temas displnibles",opts.verbose)
+            print_report("\n\tTemas",opts.report)
+            for directory in dirs:
+                cont = 0
+                with open(cms_json['themes']) as themes_list:
+                    for theme in themes_list:
+                        cont += 1
+                        theme = theme[:-1]
+                        url2theme = concat(concat(cms_root, directory),theme)
+                        s=session()
+                        headers={}
+                        headers['User-agent']=choice(make_agent('user_agents.txt'))
+                        response=head(url2theme, headers=headers)
+                        cad = 'Buscando el tema: ' +url2theme
+                        print_one(cad,opts.verbose)
+                        #Si se obtiene respuesta 200 o 403, es que este recurso existe
+                        if ((response.status_code >= 200 and response.status_code < 400) or response.status_code == 403):
+                            print_verbose('El tema ('+theme +') fue encontrado en el CMS, ruta:     '+url2theme,opts.verbose)
+                            print_report('El tema ('+theme +') fue encontrado en el CMS, ruta:\t'+url2theme,opts.report)
+                        if cont >= opts.num_plugins:
+                            break
+        except Exception as e:
+            print_report('Error al abrir el archivo dado en themes', opts.report)
+            printError('Error al intentar leer el archivo',True) 
+    else:
+        print_report('No se encontraron en el JSON las llaves necesarias: \n themes y themes_dir', opts.report)
+        printError('Error en el json dado',True)
+
 
 def check_files(opts, cms_json, cms_root):
     if 'check_files' in cms_json.keys():
