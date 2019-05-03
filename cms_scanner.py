@@ -266,6 +266,11 @@ def get_root(opts,files):
     if max(found) == 0:
         printError("No se pudo encontrar la raiz", True)
     root = pos[found.index(max(found))]
+<<<<<<< HEAD
+=======
+    if root[-1] == '/':
+        root = root[-1]
+>>>>>>> 9025be3fdffffed50a4fdeb280ea47b8c77ed8e5
     msg = '\n######## Raiz del CMS: '+root+' ########\n'
     print_verbose(msg,opts.verbose)
     print_report(msg,opts.report)

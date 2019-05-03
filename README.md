@@ -20,7 +20,7 @@ Ejemplo:
 ```
 
 ### Banderas
-Para sue ejecución, el script puede recibir distintos argumentos:
+Para su ejecución, el script puede recibir distintos argumentos:
 
 * _-u_ -> La URL del aplicativo objetivo.
 * _-c_ -> Archivo JSON de configuracion al script
