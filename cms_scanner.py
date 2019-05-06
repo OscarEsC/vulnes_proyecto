@@ -267,7 +267,7 @@ def get_root(opts,files):
         printError("No se pudo encontrar la raiz", True)
     root = pos[found.index(max(found))]
     if root[-1] == '/':
-        root = root[-1]
+        root = root[:-1]
     msg = '\n######## Raiz del CMS: '+root+' ########\n'
     print_verbose(msg,opts.verbose)
     print_report(msg,opts.report)
@@ -624,7 +624,7 @@ def main_cms_analizer():
         check_version(cms_root, opts, cms_json)
         check_backups(cms_root, cms_json, opts)
         check_files(opts, cms_json,cms_root)
-        print "\n\n\n"
+        #print "\n\n\n"
         get_installed_plugins(opts, cms_json, cms_root)
         check_login(cms_root, opts, cms_json)
         check_themes(cms_root, opts, cms_json)
